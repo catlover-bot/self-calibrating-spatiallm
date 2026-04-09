@@ -1,0 +1,28 @@
+{
+  "scene_id": "indoor_room_real_002",
+  "expected_up_axis": "z",
+  "expected_horizontal_axis": "x",
+  "room_orientation_hint": "north_wall_parallel_to_x",
+  "expected_scale_hint": "expected_unit:meter",
+  "expected_door_count": 1,
+  "expected_window_count": 0,
+  "expected_object_categories": ["floor", "wall", "table", "mug", "door"],
+  "expected_relations": [
+    {
+      "subject_category": "mug",
+      "predicate": "supported-by",
+      "object_category": "table"
+    }
+  ],
+  "traversability_labels": [
+    {
+      "target_category": "door",
+      "should_be_accessible": true
+    },
+    {
+      "target_category": "mug",
+      "should_be_accessible": true
+    }
+  ],
+  "notes": "Scene 002 keeps same category expectations but varies normalization setting."
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ActionableScene",
+  "type": "object",
+  "required": ["sample_id", "builder_name", "relations", "actions"],
+  "properties": {
+    "sample_id": {"type": "string"},
+    "builder_name": {"type": "string"},
+    "anchor_object_id": {"type": ["string", "null"]},
+    "relations": {
+      "type": "array",
+      "items": {"$ref": "./scene_relation.schema.json"}
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action", "target_object_id", "rationale"],
+        "properties": {
+          "action": {"type": "string"},
+          "target_object_id": {"type": "string"},
+          "rationale": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

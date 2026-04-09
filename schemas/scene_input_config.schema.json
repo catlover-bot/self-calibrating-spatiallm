@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SceneInputConfig",
+  "type": "object",
+  "required": ["scene_id", "file_path", "source_type"],
+  "properties": {
+    "scene_id": {"type": "string"},
+    "file_path": {"type": "string"},
+    "source_type": {"type": "string", "enum": ["auto", "ply", "pcd", "npy", "npz"]},
+    "metadata_path": {"type": ["string", "null"]},
+    "expected_unit": {"type": ["string", "null"]},
+    "scale_hint": {"type": ["string", "null"]},
+    "output_dir": {"type": ["string", "null"]},
+    "normalize_scene": {"type": "boolean"},
+    "calibration_mode": {"type": "string", "enum": ["none", "v0", "v1"]},
+    "generator_mode": {"type": "string", "enum": ["mock", "external"]},
+    "spatiallm_command": {"type": ["string", "null"]},
+    "spatiallm_output_json": {"type": ["string", "null"]},
+    "external_timeout_sec": {"type": "integer", "minimum": 1},
+    "spatiallm_command_env_var": {"type": "string"},
+    "spatiallm_export_format": {"type": "string", "enum": ["json"]},
+    "compare_with_external_generator": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

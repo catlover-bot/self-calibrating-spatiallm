@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "self-calibrating-spatiallm"
+version = "0.1.0"
+description = "Pipeline-centric research scaffold for self-calibrating structured 3D scenes."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "self-calibrating-spatiallm contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+calibration_v1 = [
+  "numpy>=1.24",
+]
+test = [
+  "pytest>=8.2",
+  "numpy>=1.24",
+]
+dev = [
+  "pytest>=8.2",
+  "numpy>=1.24",
+  "ruff>=0.5",
+  "mypy>=1.10",
+]
+
+[project.scripts]
+scslm = "self_calibrating_spatiallm.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.9"
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+strict_equality = true
+mypy_path = "src"
+files = ["src"]

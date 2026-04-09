@@ -1,0 +1,44 @@
+{
+  "name": "small_eval_pack_v1",
+  "notes": "Lightweight 5-scene evaluation pack for initial calibration/repair evidence.",
+  "entries": [
+    {
+      "sample_config_path": "../samples/real_scene_config_001.json",
+      "annotation_path": "../annotations/indoor_room_real_001.annotation.json",
+      "source_type": "ply",
+      "tags": ["indoor", "baseline"],
+      "notes": "Reference scene."
+    },
+    {
+      "sample_config_path": "../samples/real_scene_config_002.json",
+      "annotation_path": "../annotations/indoor_room_real_002.annotation.json",
+      "source_type": "ply",
+      "tags": ["indoor", "normalize_false"],
+      "notes": "Calibration robustness check."
+    },
+    {
+      "sample_config_path": "../samples/real_scene_config_003.json",
+      "annotation_path": "../annotations/indoor_room_real_003.annotation.json",
+      "source_type": "ply",
+      "tags": ["indoor", "scale_hint_variant"],
+      "notes": "Scale hint mismatch stress."
+    },
+    {
+      "sample_config_path": "../samples/real_scene_config_004.json",
+      "annotation_path": "../annotations/indoor_room_real_004.annotation.json",
+      "source_type": "ply",
+      "tags": ["indoor", "replicate"],
+      "notes": "Replicate 1."
+    },
+    {
+      "sample_config_path": "../samples/real_scene_config_005.json",
+      "annotation_path": "../annotations/indoor_room_real_005.annotation.json",
+      "source_type": "ply",
+      "tags": ["indoor", "replicate", "scale_hint"],
+      "notes": "Replicate 2."
+    }
+  ],
+  "metadata": {
+    "version": "1.0"
+  }
+}

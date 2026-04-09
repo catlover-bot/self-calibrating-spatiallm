@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CalibratedPointCloud",
+  "type": "object",
+  "required": ["sample_id", "points", "calibration"],
+  "properties": {
+    "sample_id": {"type": "string"},
+    "points": {
+      "type": "array",
+      "items": {"$ref": "./point3d.schema.json"}
+    },
+    "calibration": {"$ref": "./calibration_result.schema.json"},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

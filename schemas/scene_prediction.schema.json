@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ScenePrediction",
+  "type": "object",
+  "required": ["sample_id", "generator_name", "objects", "relations"],
+  "properties": {
+    "sample_id": {"type": "string"},
+    "generator_name": {"type": "string"},
+    "metadata": {"type": "object"},
+    "objects": {
+      "type": "array",
+      "items": {"$ref": "./scene_object.schema.json"}
+    },
+    "relations": {
+      "type": "array",
+      "items": {"$ref": "./scene_relation.schema.json"}
+    }
+  },
+  "additionalProperties": false
+}

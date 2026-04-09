@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunManifest",
+  "type": "object",
+  "required": [
+    "scene_id",
+    "status",
+    "started_at",
+    "finished_at",
+    "generator_mode",
+    "calibration_mode",
+    "repair_mode",
+    "stages",
+    "artifacts"
+  ],
+  "properties": {
+    "scene_id": {"type": "string"},
+    "status": {"type": "string", "enum": ["success", "failed"]},
+    "started_at": {"type": ["string", "null"]},
+    "finished_at": {"type": ["string", "null"]},
+    "generator_mode": {"type": "string"},
+    "calibration_mode": {"type": "string"},
+    "repair_mode": {"type": "string"},
+    "calibration_execution": {
+      "type": ["object", "null"],
+      "properties": {
+        "method": {"type": "string"},
+        "plane_aware_logic_ran": {"type": "boolean"},
+        "true_v1_execution": {"type": "boolean"},
+        "fallback_used": {"type": "boolean"},
+        "fallback_reason": {"type": ["string", "null"]},
+        "candidate_plane_count": {"type": "integer", "minimum": 0},
+        "weak_scale_reasoning_active": {"type": "boolean"},
+        "up_axis_confidence": {"type": ["number", "null"]},
+        "horizontal_confidence": {"type": ["number", "null"]},
+        "overall_reliability": {"type": ["number", "null"]},
+        "manhattan_ambiguity": {"type": ["number", "null"]},
+        "scale_drift": {"type": ["number", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "error": {"type": ["string", "null"]},
+    "stages": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "started_at", "finished_at", "error"],
+        "properties": {
+          "status": {"type": "string", "enum": ["success", "failed"]},
+          "started_at": {"type": ["string", "null"]},
+          "finished_at": {"type": ["string", "null"]},
+          "error": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

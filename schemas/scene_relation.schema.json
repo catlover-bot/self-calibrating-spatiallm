@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SceneRelation",
+  "type": "object",
+  "required": ["subject_id", "predicate", "object_id"],
+  "properties": {
+    "subject_id": {"type": "string"},
+    "predicate": {"type": "string"},
+    "object_id": {"type": "string"},
+    "score": {"type": "number"},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

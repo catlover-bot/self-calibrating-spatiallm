@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PointCloudMetadata",
+  "type": "object",
+  "required": [
+    "sample_id",
+    "source_path",
+    "source_type",
+    "num_points",
+    "bbox_min",
+    "bbox_max",
+    "centroid",
+    "coordinate_ranges",
+    "has_rgb"
+  ],
+  "properties": {
+    "sample_id": {"type": "string"},
+    "source_path": {"type": "string"},
+    "source_type": {"type": "string", "enum": ["ply", "pcd", "npy", "npz"]},
+    "num_points": {"type": "integer", "minimum": 1},
+    "bbox_min": {"$ref": "./point3d.schema.json"},
+    "bbox_max": {"$ref": "./point3d.schema.json"},
+    "centroid": {"$ref": "./point3d.schema.json"},
+    "coordinate_ranges": {
+      "type": "object",
+      "required": ["x", "y", "z"],
+      "properties": {
+        "x": {"type": "number"},
+        "y": {"type": "number"},
+        "z": {"type": "number"}
+      },
+      "additionalProperties": false
+    },
+    "has_rgb": {"type": "boolean"},
+    "expected_unit": {"type": ["string", "null"]},
+    "inferred_scale_hint": {"type": ["string", "null"]},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

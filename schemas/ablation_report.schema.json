@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AblationReport",
+  "type": "object",
+  "required": ["sample_id", "settings"],
+  "properties": {
+    "sample_id": {"type": "string"},
+    "settings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "setting_name",
+          "calibration_enabled",
+          "repair_enabled",
+          "calibration_method",
+          "repairer_name",
+          "evaluation"
+        ],
+        "properties": {
+          "setting_name": {"type": "string"},
+          "calibration_enabled": {"type": "boolean"},
+          "repair_enabled": {"type": "boolean"},
+          "calibration_method": {"type": "string"},
+          "repairer_name": {"type": "string"},
+          "evaluation": {"$ref": "./evaluation_result.schema.json"},
+          "metadata": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "generator_settings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "setting_name",
+          "calibration_enabled",
+          "repair_enabled",
+          "calibration_method",
+          "repairer_name",
+          "evaluation"
+        ],
+        "properties": {
+          "setting_name": {"type": "string"},
+          "calibration_enabled": {"type": "boolean"},
+          "repair_enabled": {"type": "boolean"},
+          "calibration_method": {"type": "string"},
+          "repairer_name": {"type": "string"},
+          "evaluation": {"$ref": "./evaluation_result.schema.json"},
+          "metadata": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

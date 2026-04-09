@@ -1,0 +1,18 @@
+{
+  "scene_id": "indoor_room_real_001",
+  "file_path": "indoor_room_real.ply",
+  "source_type": "ply",
+  "metadata_path": "real_scene_metadata.json",
+  "expected_unit": "meter",
+  "scale_hint": null,
+  "output_dir": "../../outputs/runs/single_scene_real",
+  "normalize_scene": true,
+  "calibration_mode": "v1",
+  "generator_mode": "mock",
+  "spatiallm_command": null,
+  "spatiallm_output_json": null,
+  "external_timeout_sec": 120,
+  "spatiallm_command_env_var": "SCSLM_SPATIALLM_COMMAND",
+  "spatiallm_export_format": "json",
+  "compare_with_external_generator": false
+}

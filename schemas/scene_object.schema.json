@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SceneObject",
+  "type": "object",
+  "required": ["object_id", "label", "position", "size"],
+  "properties": {
+    "object_id": {"type": "string"},
+    "label": {"type": "string"},
+    "position": {"$ref": "./point3d.schema.json"},
+    "size": {"$ref": "./point3d.schema.json"},
+    "confidence": {"type": "number"},
+    "attributes": {"type": "object"}
+  },
+  "additionalProperties": false
+}

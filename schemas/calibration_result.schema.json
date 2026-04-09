@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CalibrationResult",
+  "type": "object",
+  "required": ["sample_id", "method", "up_vector", "horizontal_axis", "origin_offset"],
+  "properties": {
+    "sample_id": {"type": "string"},
+    "method": {"type": "string"},
+    "up_vector": {"$ref": "./point3d.schema.json"},
+    "horizontal_axis": {"$ref": "./point3d.schema.json"},
+    "origin_offset": {"$ref": "./point3d.schema.json"},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

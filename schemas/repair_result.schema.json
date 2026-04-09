@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RepairResult",
+  "type": "object",
+  "required": ["sample_id", "repairer_name", "issues", "fixes_applied", "repaired_scene"],
+  "properties": {
+    "sample_id": {"type": "string"},
+    "repairer_name": {"type": "string"},
+    "issues": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "fixes_applied": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "repaired_scene": {"$ref": "./scene_prediction.schema.json"},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

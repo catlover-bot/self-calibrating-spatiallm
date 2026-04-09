@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvaluationPackReport",
+  "type": "object",
+  "required": [
+    "manifest_name",
+    "generated_at",
+    "scenes",
+    "aggregate_by_setting",
+    "comparison_table",
+    "failure_summary",
+    "v1_execution_summary",
+    "v0_v1_comparison_summary"
+  ],
+  "properties": {
+    "manifest_name": {"type": "string"},
+    "generated_at": {"type": "string"},
+    "scenes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["scene_id", "sample_config_path", "settings"],
+        "properties": {
+          "scene_id": {"type": "string"},
+          "sample_config_path": {"type": "string"},
+          "annotation_path": {"type": ["string", "null"]},
+          "source_type": {"type": ["string", "null"]},
+          "tags": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "notes": {"type": ["string", "null"]},
+          "settings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["setting_name", "status", "metrics", "failures"],
+              "properties": {
+                "setting_name": {"type": "string"},
+                "status": {"type": "string"},
+                "metrics": {"type": "object"},
+                "failures": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                },
+                "notes": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                },
+                "metadata": {"type": "object"}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "aggregate_by_setting": {"type": "object"},
+    "comparison_table": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "failure_summary": {"type": "object"},
+    "v1_execution_summary": {"type": "object"},
+    "v0_v1_comparison_summary": {"type": "object"},
+    "environment_readiness": {"type": "object"},
+    "comparison_warning": {"type": ["string", "null"]},
+    "next_actions": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "scene_level_delta_report": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "stratified_v0_v1_summary": {"type": "object"},
+    "first_research_result_summary": {"type": "object"},
+    "trustworthy_comparison_status": {"type": "object"},
+    "next_improvement_decision": {"type": "object"},
+    "researcher_summary": {"type": "object"},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

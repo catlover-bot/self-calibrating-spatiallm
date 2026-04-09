@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SceneAnnotation",
+  "type": "object",
+  "required": ["scene_id"],
+  "properties": {
+    "scene_id": {"type": "string"},
+    "expected_up_axis": {"type": ["string", "null"]},
+    "expected_horizontal_axis": {"type": ["string", "null"]},
+    "room_orientation_hint": {"type": ["string", "null"]},
+    "expected_scale_hint": {"type": ["string", "null"]},
+    "expected_door_count": {"type": ["integer", "null"], "minimum": 0},
+    "expected_window_count": {"type": ["integer", "null"], "minimum": 0},
+    "expected_object_categories": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "expected_relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["subject_category", "predicate", "object_category"],
+        "properties": {
+          "subject_category": {"type": "string"},
+          "predicate": {"type": "string"},
+          "object_category": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "traversability_labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target_category", "should_be_accessible"],
+        "properties": {
+          "target_category": {"type": "string"},
+          "should_be_accessible": {"type": "boolean"},
+          "question": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "notes": {"type": ["string", "null"]},
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}

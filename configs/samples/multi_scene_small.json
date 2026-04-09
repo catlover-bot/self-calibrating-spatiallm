@@ -1,0 +1,7 @@
+{
+  "config_paths": [
+    "real_scene_config_001.json",
+    "real_scene_config_002.json",
+    "real_scene_config_003.json"
+  ]
+}
