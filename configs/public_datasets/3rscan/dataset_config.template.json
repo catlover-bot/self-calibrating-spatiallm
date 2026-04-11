@@ -1,0 +1,6 @@
+{
+  "dataset_name": "3rscan",
+  "dataset_root": "/absolute/path/to/3RScan",
+  "point_cloud_extensions": [".ply"],
+  "notes": "Placeholder template for future 3RScan subset integration."
+}

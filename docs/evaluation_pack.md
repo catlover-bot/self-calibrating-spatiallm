@@ -68,6 +68,10 @@ PYTHONPATH=src python scripts/run_post_true_v1_analysis.py \
   --output-dir outputs/eval_pack/latest
 ```
 
+Public dataset subset workflow (ARKitScenes-first scaffold):
+
+- `docs/public_datasets.md`
+
 ## Compared Settings
 
 - `no_calibration`

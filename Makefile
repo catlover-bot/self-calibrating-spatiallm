@@ -1,8 +1,14 @@
 PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
 PYTHONPATH ?= src
+ARKITSCENES_ROOT ?= /absolute/path/to/ARKitScenes
+ARKITSCENES_SUBSET_SIZE ?= 25
+ARKITSCENES_SEED ?= 13
+PUBLIC_MANIFEST ?= configs/public_datasets/arkitscenes/generated/arkitscenes_subset_manifest.json
+PUBLIC_EVAL_OUTPUT ?= outputs/eval_pack/public_medium_latest
+PUBLIC_BUILD_ARGS ?=
 
-.PHONY: setup setup-true-v1 install-true-v1 lint format typecheck test check pipeline pipeline-multi eval-pack failure-analysis check-env eval-v1 failure-v1 debug-v1 v1-workflow post-true-v1-analysis
+.PHONY: setup setup-true-v1 install-true-v1 lint format typecheck test check pipeline pipeline-multi eval-pack failure-analysis check-env eval-v1 failure-v1 debug-v1 v1-workflow post-true-v1-analysis build-arkitscenes-manifest validate-public-manifest public-workflow
 
 setup:
 	$(PYTHON) -m venv .venv
@@ -58,3 +64,12 @@ v1-workflow:
 
 post-true-v1-analysis:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/run_post_true_v1_analysis.py --evaluation-report outputs/eval_pack/latest/evaluation_report.json --output-dir outputs/eval_pack/latest
+
+build-arkitscenes-manifest:
+	PYTHONPATH=src $(PYTHON) scripts/build_arkitscenes_manifest.py --dataset-root $(ARKITSCENES_ROOT) --subset-size $(ARKITSCENES_SUBSET_SIZE) --seed $(ARKITSCENES_SEED) $(PUBLIC_BUILD_ARGS)
+
+validate-public-manifest:
+	PYTHONPATH=src $(PYTHON) scripts/validate_public_dataset_manifest.py --manifest $(PUBLIC_MANIFEST) --check-load --format text --summary-output $(PUBLIC_EVAL_OUTPUT)/public_manifest_validation.json
+
+public-workflow:
+	MANIFEST_PATH=$(PUBLIC_MANIFEST) EVAL_OUTPUT_DIR=$(PUBLIC_EVAL_OUTPUT) bash scripts/run_public_dataset_workflow.sh

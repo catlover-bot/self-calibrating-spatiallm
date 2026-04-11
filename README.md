@@ -312,6 +312,57 @@ PYTHONPATH=src python scripts/run_post_true_v1_analysis.py \
   --output-dir outputs/eval_pack/latest
 ```
 
+## Public Dataset Experiments (ARKitScenes First)
+
+The next stage is medium-scale robustness testing on public data, starting with ARKitScenes.
+
+Why ARKitScenes:
+
+- mobile RGB-D / LiDAR indoor capture matches the project goal
+- noisier real capture stresses calibration and propagation better than curated static scans
+- good fit for testing calibration-to-generation robustness before large-scale benchmarking
+
+Recommended first subset size:
+
+- `20-30` scenes (use `25` as default)
+
+Build a small subset manifest (10 scenes):
+
+```bash
+make build-arkitscenes-manifest ARKITSCENES_ROOT=/absolute/path/to/ARKitScenes ARKITSCENES_SUBSET_SIZE=10
+```
+
+Build a medium subset manifest (25 scenes, recommended):
+
+```bash
+make build-arkitscenes-manifest ARKITSCENES_ROOT=/absolute/path/to/ARKitScenes ARKITSCENES_SUBSET_SIZE=25
+```
+
+Validate scene usability and print summary stats:
+
+```bash
+make validate-public-manifest
+```
+
+Run the public-dataset workflow:
+
+```bash
+make public-workflow
+```
+
+Inspect first:
+
+- `outputs/eval_pack/public_medium_latest/researcher_summary.md`
+- `outputs/eval_pack/public_medium_latest/trustworthy_comparison_status.md`
+- `outputs/eval_pack/public_medium_latest/scene_level_delta_report.md`
+- `outputs/eval_pack/public_medium_latest/stratified_v0_v1_summary.md`
+- `outputs/eval_pack/public_medium_latest/external_propagation_summary.md`
+- `outputs/eval_pack/public_medium_latest/evaluation_report.md`
+
+Detailed guide:
+
+- `docs/public_datasets.md`
+
 ## Failure Taxonomy
 
 Failure categories include:
@@ -366,7 +417,8 @@ Fallback-heavy interpretation:
 ├── configs/
 │   ├── samples/                     # Scene configs
 │   ├── annotations/                 # Lightweight per-scene annotations
-│   └── eval_pack/                   # Evaluation pack manifests
+│   ├── eval_pack/                   # Evaluation pack manifests
+│   └── public_datasets/             # ARKitScenes-first public dataset templates
 ├── scripts/
 │   ├── run_pipeline.py
 │   ├── run_multi_scene.py
@@ -375,7 +427,10 @@ Fallback-heavy interpretation:
 │   ├── run_true_v1_workflow.sh
 │   ├── run_eval_pack.py
 │   ├── run_failure_analysis.py
-│   └── run_post_true_v1_analysis.py
+│   ├── run_post_true_v1_analysis.py
+│   ├── build_arkitscenes_manifest.py
+│   ├── validate_public_dataset_manifest.py
+│   └── run_public_dataset_workflow.sh
 ├── schemas/                         # JSON schemas for configs/artifacts
 ├── src/self_calibrating_spatiallm/
 │   ├── io/

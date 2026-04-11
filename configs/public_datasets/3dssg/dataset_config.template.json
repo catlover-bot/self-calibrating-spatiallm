@@ -1,0 +1,6 @@
+{
+  "dataset_name": "3dssg",
+  "dataset_root": "/absolute/path/to/3DSSG",
+  "point_cloud_extensions": [".ply"],
+  "notes": "Placeholder template for future 3DSSG relation-focused subset integration."
+}

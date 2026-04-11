@@ -1,0 +1,16 @@
+{
+  "dataset_name": "arkitscenes",
+  "dataset_root": "/absolute/path/to/ARKitScenes",
+  "output_dir": "configs/public_datasets/arkitscenes/generated",
+  "point_cloud_extensions": [".ply"],
+  "subset_size": 25,
+  "seed": 13,
+  "calibration_mode": "v1",
+  "generator_mode": "mock",
+  "normalize_scene": true,
+  "expected_unit": "meter",
+  "scale_hint": null,
+  "external_timeout_sec": 300,
+  "compare_with_external_generator": false,
+  "manifest_name": "arkitscenes_subset_25"
+}
