@@ -33,7 +33,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "Supported placeholders: {spatiallm_input}, {input_json}, {output_json}, {scene_id}"
         ),
     )
-    parser.add_argument("--timeout-sec", type=int, default=120, help="Backend timeout")
+    parser.add_argument("--timeout-sec", type=int, default=300, help="Backend timeout")
     return parser
 
 

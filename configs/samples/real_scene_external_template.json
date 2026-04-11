@@ -11,7 +11,7 @@
   "generator_mode": "external",
   "spatiallm_command": null,
   "spatiallm_output_json": null,
-  "external_timeout_sec": 120,
+  "external_timeout_sec": 300,
   "spatiallm_command_env_var": "SCSLM_SPATIALLM_COMMAND",
   "spatiallm_export_format": "json",
   "compare_with_external_generator": true

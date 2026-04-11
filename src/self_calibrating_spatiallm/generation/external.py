@@ -38,7 +38,7 @@ class SpatialLMExternalGenerator(SceneGenerator):
     def __init__(
         self,
         command: str | Sequence[str] | None = None,
-        timeout_sec: int = 120,
+        timeout_sec: int = 300,
         output_json_path: Path | None = None,
         command_env_var: str = "SCSLM_SPATIALLM_COMMAND",
         export_format: str = "json",

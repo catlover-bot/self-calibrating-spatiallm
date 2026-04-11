@@ -28,7 +28,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--timeout-sec",
         type=int,
-        default=120,
+        default=300,
         help="Timeout for backend command execution",
     )
     return parser

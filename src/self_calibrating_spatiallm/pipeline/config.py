@@ -27,7 +27,7 @@ class SceneInputConfig:
     generator_mode: str = "mock"
     spatiallm_command: str | None = None
     spatiallm_output_json: str | None = None
-    external_timeout_sec: int = 120
+    external_timeout_sec: int = 300
     spatiallm_command_env_var: str = "SCSLM_SPATIALLM_COMMAND"
     spatiallm_export_format: str = "json"
     compare_with_external_generator: bool = False
@@ -51,7 +51,7 @@ class SceneInputConfig:
             spatiallm_output_json=(
                 str(data["spatiallm_output_json"]) if data.get("spatiallm_output_json") else None
             ),
-            external_timeout_sec=int(data.get("external_timeout_sec", 120)),
+            external_timeout_sec=int(data.get("external_timeout_sec", 300)),
             spatiallm_command_env_var=str(
                 data.get("spatiallm_command_env_var", "SCSLM_SPATIALLM_COMMAND")
             ),
