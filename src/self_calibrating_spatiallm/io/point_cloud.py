@@ -37,7 +37,7 @@ def load_point_cloud_sample(
     if source_type in {"npy", "npz"}:
         xyz, rgb, loader_details = _load_numpy_point_cloud(file_path)
     elif source_type == "ply":
-        xyz, rgb, loader_details = _load_ascii_ply(file_path)
+        xyz, rgb, loader_details = _load_ply(file_path)
     elif source_type == "pcd":
         xyz, rgb, loader_details = _load_ascii_pcd(file_path)
     else:
@@ -184,55 +184,152 @@ def _select_points_key(keys: list[str]) -> str | None:
     return keys[0] if keys else None
 
 
-def _load_ascii_ply(path: Path) -> tuple[list[list[float]], list[list[float]] | None, dict[str, Any]]:
-    lines = path.read_text(encoding="utf-8").splitlines()
-    if not lines or lines[0].strip() != "ply":
+_PLY_STRUCT_FORMATS = {
+    "char": "b",
+    "int8": "b",
+    "uchar": "B",
+    "uint8": "B",
+    "short": "h",
+    "int16": "h",
+    "ushort": "H",
+    "uint16": "H",
+    "int": "i",
+    "int32": "i",
+    "uint": "I",
+    "uint32": "I",
+    "float": "f",
+    "float32": "f",
+    "double": "d",
+    "float64": "d",
+}
+
+
+def _load_ply(path: Path) -> tuple[list[list[float]], list[list[float]] | None, dict[str, Any]]:
+    raw = path.read_bytes()
+    header = _parse_ply_header(raw, path)
+    data = raw[header["data_offset"] :]
+
+    fmt = header["format"]
+    if fmt == "ascii":
+        return _load_ply_ascii_data(data, header)
+    if fmt in {"binary_little_endian", "binary_big_endian"}:
+        return _load_ply_binary_data(data, header)
+    raise ValueError(f"Unsupported PLY format {fmt} in {path}")
+
+
+def _parse_ply_header(raw: bytes, path: Path) -> dict[str, Any]:
+    marker = b"end_header"
+    marker_index = raw.find(marker)
+    if marker_index < 0:
+        raise ValueError(f"PLY header missing end_header: {path}")
+
+    header_line_end = raw.find(b"\n", marker_index)
+    if header_line_end < 0:
+        header_line_end = marker_index + len(marker)
+    else:
+        header_line_end += 1
+
+    header_text = raw[:header_line_end].decode("ascii", errors="replace")
+    lines = [line.strip() for line in header_text.splitlines() if line.strip()]
+    if not lines or lines[0] != "ply":
         raise ValueError(f"Not a PLY file: {path}")
 
-    vertex_count = 0
-    properties: list[str] = []
-    in_vertex_block = False
-    header_end = -1
+    fmt = "ascii"
+    elements: dict[str, dict[str, Any]] = {}
+    current_element: str | None = None
 
-    for idx, line in enumerate(lines[1:], start=1):
-        stripped = line.strip()
-
-        if stripped.startswith("format") and "ascii" not in stripped:
-            raise ValueError("Only ASCII PLY is supported in this baseline loader")
-
-        if stripped.startswith("element "):
-            in_vertex_block = stripped.startswith("element vertex")
-            if in_vertex_block:
-                parts = stripped.split()
-                vertex_count = int(parts[-1])
-                properties = []
+    for line in lines[1:]:
+        if line.startswith("comment ") or line.startswith("obj_info "):
             continue
 
-        if in_vertex_block and stripped.startswith("property "):
-            properties.append(stripped.split()[-1])
+        if line.startswith("format "):
+            parts = line.split()
+            if len(parts) < 2:
+                raise ValueError(f"Malformed PLY format row: {line}")
+            fmt = parts[1]
             continue
 
-        if stripped == "end_header":
-            header_end = idx
+        if line.startswith("element "):
+            parts = line.split()
+            if len(parts) != 3:
+                raise ValueError(f"Malformed PLY element row: {line}")
+            element_name = parts[1]
+            element_count = int(parts[2])
+            elements[element_name] = {"count": element_count, "properties": []}
+            current_element = element_name
+            continue
+
+        if line.startswith("property "):
+            if current_element is None:
+                raise ValueError(f"PLY property declared before element block: {line}")
+            parts = line.split()
+            if len(parts) >= 3 and parts[1] == "list":
+                elements[current_element]["properties"].append(
+                    {
+                        "kind": "list",
+                        "count_type": parts[2],
+                        "value_type": parts[3] if len(parts) > 3 else "",
+                        "name": parts[4] if len(parts) > 4 else "",
+                    }
+                )
+            elif len(parts) == 3:
+                elements[current_element]["properties"].append(
+                    {"kind": "scalar", "type": parts[1], "name": parts[2]}
+                )
+            else:
+                raise ValueError(f"Malformed PLY property row: {line}")
+            continue
+
+        if line == "end_header":
             break
 
-    if header_end < 0:
-        raise ValueError(f"PLY header missing end_header: {path}")
+    vertex_element = elements.get("vertex")
+    if vertex_element is None:
+        raise ValueError(f"PLY file has no vertex element: {path}")
+
+    vertex_count = int(vertex_element["count"])
     if vertex_count <= 0:
         raise ValueError(f"PLY vertex count invalid: {vertex_count}")
 
+    vertex_properties = list(vertex_element.get("properties", []))
+    if not vertex_properties:
+        raise ValueError("PLY vertex element has no properties")
+
+    property_names: list[str] = []
+    for prop in vertex_properties:
+        if prop.get("kind") != "scalar":
+            raise ValueError("PLY vertex list properties are not supported")
+        property_names.append(str(prop.get("name", "")))
+
+    return {
+        "format": fmt,
+        "vertex_count": vertex_count,
+        "vertex_properties": vertex_properties,
+        "property_names": property_names,
+        "data_offset": header_line_end,
+    }
+
+
+def _load_ply_ascii_data(
+    data: bytes,
+    header: dict[str, Any],
+) -> tuple[list[list[float]], list[list[float]] | None, dict[str, Any]]:
+    vertex_count = int(header["vertex_count"])
+    properties = list(header["property_names"])
     indices = _find_xyz_indices(properties)
     rgb_indices = _find_rgb_indices(properties)
+
+    text = data.decode("utf-8")
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    data_lines = lines[:vertex_count]
+    if len(data_lines) < vertex_count:
+        raise ValueError(f"PLY vertex section shorter than expected ({len(data_lines)} < {vertex_count})")
 
     xyz_rows: list[list[float]] = []
     rgb_rows: list[list[float]] = []
 
-    data_lines = lines[header_end + 1 : header_end + 1 + vertex_count]
-    if len(data_lines) < vertex_count:
-        raise ValueError(f"PLY vertex section shorter than expected ({len(data_lines)} < {vertex_count})")
-
     for line in data_lines:
-        parts = line.strip().split()
+        parts = line.split()
         xyz_rows.append([float(parts[indices[0]]), float(parts[indices[1]]), float(parts[indices[2]])])
 
         if rgb_indices is not None:
@@ -247,6 +344,64 @@ def _load_ascii_ply(path: Path) -> tuple[list[list[float]], list[list[float]] | 
     rgb = rgb_rows if rgb_rows else None
     return xyz_rows, rgb, {
         "format": "ply_ascii",
+        "vertex_count": vertex_count,
+        "properties": properties,
+    }
+
+
+def _load_ply_binary_data(
+    data: bytes,
+    header: dict[str, Any],
+) -> tuple[list[list[float]], list[list[float]] | None, dict[str, Any]]:
+    fmt = str(header["format"])
+    vertex_count = int(header["vertex_count"])
+    vertex_properties = list(header["vertex_properties"])
+    properties = list(header["property_names"])
+    indices = _find_xyz_indices(properties)
+    rgb_indices = _find_rgb_indices(properties)
+
+    endian = "<" if fmt == "binary_little_endian" else ">"
+    scalar_formats: list[str] = []
+    for prop in vertex_properties:
+        type_name = str(prop["type"]).lower()
+        struct_fmt = _PLY_STRUCT_FORMATS.get(type_name)
+        if struct_fmt is None:
+            raise ValueError(f"Unsupported PLY scalar property type: {type_name}")
+        scalar_formats.append(struct_fmt)
+
+    record_struct = struct.Struct(endian + "".join(scalar_formats))
+    expected_bytes = vertex_count * record_struct.size
+    if len(data) < expected_bytes:
+        raise ValueError(
+            f"PLY binary vertex section shorter than expected ({len(data)} < {expected_bytes})"
+        )
+
+    xyz_rows: list[list[float]] = []
+    rgb_rows: list[list[float]] = []
+    offset = 0
+    for _ in range(vertex_count):
+        values = record_struct.unpack_from(data, offset)
+        offset += record_struct.size
+        xyz_rows.append(
+            [
+                float(values[indices[0]]),
+                float(values[indices[1]]),
+                float(values[indices[2]]),
+            ]
+        )
+
+        if rgb_indices is not None:
+            rgb_rows.append(
+                [
+                    float(values[rgb_indices[0]]),
+                    float(values[rgb_indices[1]]),
+                    float(values[rgb_indices[2]]),
+                ]
+            )
+
+    rgb = rgb_rows if rgb_rows else None
+    return xyz_rows, rgb, {
+        "format": f"ply_{fmt}",
         "vertex_count": vertex_count,
         "properties": properties,
     }

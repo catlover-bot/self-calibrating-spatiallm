@@ -1,4 +1,5 @@
 from pathlib import Path
+import struct
 
 import numpy as np
 
@@ -79,3 +80,41 @@ def test_loader_supports_npy_npz_ply_pcd(tmp_path: Path) -> None:
         assert metadata.num_points == 3
         assert metadata.coordinate_ranges["x"] == 1.0
         assert metadata.has_rgb is True
+
+
+def test_loader_supports_binary_ply(tmp_path: Path) -> None:
+    ply_path = tmp_path / "scene_binary.ply"
+    header = "\n".join(
+        [
+            "ply",
+            "format binary_little_endian 1.0",
+            "element vertex 3",
+            "property float x",
+            "property float y",
+            "property float z",
+            "property uchar red",
+            "property uchar green",
+            "property uchar blue",
+            "end_header",
+        ]
+    ).encode("ascii") + b"\n"
+
+    body = b"".join(
+        [
+            struct.pack("<fffBBB", 0.0, 0.0, 0.0, 255, 0, 0),
+            struct.pack("<fffBBB", 1.0, 0.0, 0.0, 0, 255, 0),
+            struct.pack("<fffBBB", 0.0, 1.0, 0.5, 0, 0, 255),
+        ]
+    )
+    ply_path.write_bytes(header + body)
+
+    sample, metadata = load_point_cloud_sample(
+        ply_path,
+        PointCloudLoadOptions(scene_id="scene-binary-ply", source_type="ply"),
+    )
+
+    assert sample.num_points == 3
+    assert metadata.num_points == 3
+    assert metadata.coordinate_ranges["x"] == 1.0
+    assert metadata.has_rgb is True
+    assert metadata.metadata["loader_details"]["format"] == "ply_binary_little_endian"
