@@ -62,6 +62,8 @@ def build_qa_examples(prediction: ScenePrediction, max_labels: int = 6, max_rela
             break
 
     seen_relation_pairs: set[tuple[str, str, str]] = set()
+    explicit_relation_count = 0
+    supported_by_subjects: list[str] = []
     for rel in sorted(
         prediction.relations,
         key=lambda item: (str(item.predicate), str(item.subject_id), str(item.object_id)),
@@ -72,6 +74,9 @@ def build_qa_examples(prediction: ScenePrediction, max_labels: int = 6, max_rela
         if triple in seen_relation_pairs:
             continue
         seen_relation_pairs.add(triple)
+        explicit_relation_count += 1
+        if str(rel.predicate) == "supported-by":
+            supported_by_subjects.append(str(rel.subject_id))
         qa_examples.append(
             {
                 "task_type": "relation_exists",
@@ -86,6 +91,33 @@ def build_qa_examples(prediction: ScenePrediction, max_labels: int = 6, max_rela
         )
         if len(seen_relation_pairs) >= max_relations:
             break
+
+    qa_examples.append(
+        {
+            "task_type": "count_explicit_relations",
+            "question": "How many explicit relation tuples are present?",
+            "answer": str(int(explicit_relation_count)),
+            "metadata": {"explicit_relation_count": explicit_relation_count},
+        }
+    )
+    if supported_by_subjects:
+        qa_examples.append(
+            {
+                "task_type": "supported_by_subjects",
+                "question": "Which objects are supported-by another object?",
+                "answer": ", ".join(sorted(supported_by_subjects)),
+                "metadata": {"subject_ids": sorted(supported_by_subjects)},
+            }
+        )
+        target_id = sorted(supported_by_subjects)[0]
+        qa_examples.append(
+            {
+                "task_type": "object_participates_in_predicate",
+                "question": f"Does object {target_id} participate in predicate supported-by?",
+                "answer": "yes",
+                "metadata": {"object_id": target_id, "predicate": "supported-by"},
+            }
+        )
 
     qa_examples.append(
         {

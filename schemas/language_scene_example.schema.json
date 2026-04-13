@@ -34,6 +34,7 @@
       "type": "array",
       "items": {"type": "string"}
     },
+    "prediction_source_class": {"type": "string"},
     "scene_paragraph_text": {"type": "string"},
     "qa_examples": {
       "type": "array",

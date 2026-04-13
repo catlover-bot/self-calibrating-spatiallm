@@ -91,6 +91,7 @@ def test_qa_generation_includes_label_and_relation_evidence_questions() -> None:
     assert "relation_exists" in task_types
     assert "relation_predicates_list" in task_types
     assert "relation_predicate_evidence" in task_types
+    assert "count_explicit_relations" in task_types
 
 
 def test_grounding_examples_are_transparent_for_reconstructed_geometry() -> None:

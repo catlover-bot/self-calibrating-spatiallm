@@ -29,6 +29,11 @@ def export_scene_prediction_to_language(prediction: ScenePrediction) -> dict[str
     reconstructed_from_summary = bool(
         prediction_metadata.get("reconstructed_from_prediction_summary", False)
     )
+    prediction_source_class = _prediction_source_class(
+        metadata=prediction_metadata,
+        has_explicit_relations=bool(relations),
+        has_hints=bool(relation_hint_count > 0 or relation_hint_predicates),
+    )
 
     object_lines: list[str] = []
     num_reconstructed_objects = 0
@@ -139,6 +144,7 @@ def export_scene_prediction_to_language(prediction: ScenePrediction) -> dict[str
         "relation_hint_predicates": relation_hint_predicates,
         "reconstructed_from_prediction_summary": reconstructed_from_summary,
         "object_geometry_mode": object_geometry_mode,
+        "prediction_source_class": prediction_source_class,
     }
 
 
@@ -197,6 +203,19 @@ def _build_hinted_relation_text(*, relation_hint_count: int, relation_hint_predi
             f"The scene includes {relation_hint_count} hinted relations with unknown predicates."
         )
     return "No explicit or hinted relation evidence was exported."
+
+
+def _prediction_source_class(*, metadata: dict[str, Any], has_explicit_relations: bool, has_hints: bool) -> str:
+    raw = metadata.get("prediction_source_class")
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    if has_explicit_relations:
+        return "explicit_structured_prediction"
+    if has_hints:
+        return "structured_prediction_with_hint_only"
+    if bool(metadata.get("reconstructed_from_prediction_summary", False)):
+        return "summary_reconstructed"
+    return "structured_prediction_with_hint_only"
 
 
 def _fmt(value: float) -> str:

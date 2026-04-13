@@ -90,16 +90,10 @@ def main() -> int:
             if not isinstance(metadata, dict):
                 metadata = {}
 
-            prediction_payload = metadata.get("structured_prediction_pre_repair")
-            prediction_source = "structured_prediction_pre_repair"
-            if not isinstance(prediction_payload, dict):
-                prediction_payload = metadata.get("structured_prediction")
-                prediction_source = "structured_prediction"
-
-            prediction = _resolve_prediction(
+            prediction, source_info = _resolve_prediction_with_provenance(
                 scene_id=scene_id,
                 setting_name=setting_name,
-                prediction_payload=prediction_payload,
+                setting_metadata=metadata,
                 prediction_summary=metadata.get("prediction_summary_pre_repair"),
             )
             prediction = _enrich_prediction_with_summary_hints(
@@ -131,10 +125,15 @@ def main() -> int:
                 "relation_evidence_level": language_export.get("relation_evidence_level"),
                 "relation_hint_count": language_export.get("relation_hint_count"),
                 "relation_hint_predicates": language_export.get("relation_hint_predicates", []),
+                "prediction_source_class": source_info.get("source_class"),
                 "qa_examples": qa_examples,
                 "grounding_examples": grounding_examples,
                 "metadata": {
-                    "prediction_source": prediction_source,
+                    "prediction_source": source_info.get("selected_from"),
+                    "prediction_source_class": source_info.get("source_class"),
+                    "prediction_source_selected_from": source_info.get("selected_from"),
+                    "prediction_source_trace": source_info.get("trace", []),
+                    "prediction_evidence_level": source_info.get("evidence_level"),
                     "language_export_source": language_export_source,
                     "generator_mode": metadata.get("generator_mode"),
                     "generator_name": metadata.get("generator_name"),
@@ -183,9 +182,14 @@ def main() -> int:
                 "relation_hint_predicates": language_export.get("relation_hint_predicates", []),
                 "relation_hint_count": language_export.get("relation_hint_count"),
                 "relation_evidence_level": language_export.get("relation_evidence_level"),
+                "relation_statement_count": len(language_export.get("relation_statements", []))
+                if isinstance(language_export.get("relation_statements"), list)
+                else 0,
                 "reconstructed_from_prediction_summary": reconstructed_from_summary,
                 "calibration_method": metadata.get("calibration_method"),
                 "generator_mode": metadata.get("generator_mode"),
+                "prediction_source_class": source_info.get("source_class"),
+                "prediction_source_selected_from": source_info.get("selected_from"),
             }
 
             counts = setting_export_counts.setdefault(
@@ -195,15 +199,25 @@ def main() -> int:
                     "num_with_structured_prediction": 0,
                     "num_with_language_export": 0,
                     "num_reconstructed_from_summary": 0,
+                    "num_source_explicit_structured_prediction": 0,
+                    "num_source_structured_prediction_with_hint_only": 0,
+                    "num_source_summary_reconstructed": 0,
                 },
             )
             counts["num_success"] += 1
-            if isinstance(prediction_payload, dict):
+            if bool(source_info.get("has_structured_prediction", False)):
                 counts["num_with_structured_prediction"] += 1
             if isinstance(language_export, dict):
                 counts["num_with_language_export"] += 1
             if reconstructed_from_summary:
                 counts["num_reconstructed_from_summary"] += 1
+            source_class = str(source_info.get("source_class", "unknown"))
+            if source_class == "explicit_structured_prediction":
+                counts["num_source_explicit_structured_prediction"] += 1
+            elif source_class == "structured_prediction_with_hint_only":
+                counts["num_source_structured_prediction_with_hint_only"] += 1
+            elif source_class == "summary_reconstructed":
+                counts["num_source_summary_reconstructed"] += 1
 
     alignment_rows = _build_alignment_rows(alignment_map)
     summary = _build_summary(
@@ -247,20 +261,153 @@ def main() -> int:
     return 0
 
 
-def _resolve_prediction(
+def _resolve_prediction_with_provenance(
     *,
     scene_id: str,
     setting_name: str,
-    prediction_payload: Any,
+    setting_metadata: dict[str, Any],
+    prediction_summary: Any,
+) -> tuple[ScenePrediction, dict[str, Any]]:
+    trace: list[str] = []
+
+    for key, payload in _candidate_prediction_payloads(setting_metadata):
+        if isinstance(payload, dict):
+            try:
+                prediction = ScenePrediction.from_dict(payload)
+                prediction = _normalize_prediction(prediction, fallback_scene_id=scene_id)
+                source_class = _classify_source_class(prediction)
+                prediction_metadata = (
+                    dict(prediction.metadata) if isinstance(prediction.metadata, dict) else {}
+                )
+                prediction_metadata.setdefault("prediction_source_class", source_class)
+                prediction_metadata.setdefault("prediction_source_selected_from", key)
+                prediction.metadata = prediction_metadata
+                trace.append(f"{key}:parsed")
+                return prediction, {
+                    "selected_from": key,
+                    "source_class": source_class,
+                    "evidence_level": _relation_evidence_level(prediction),
+                    "has_structured_prediction": True,
+                    "trace": trace,
+                }
+            except Exception as error:
+                trace.append(f"{key}:parse_failed:{type(error).__name__}")
+        elif payload is not None:
+            trace.append(f"{key}:not_object")
+
+    recovered_prediction = _recover_prediction_from_metadata_artifacts(
+        scene_id=scene_id,
+        setting_name=setting_name,
+        setting_metadata=setting_metadata,
+        prediction_summary=prediction_summary,
+        trace=trace,
+    )
+    if recovered_prediction is not None:
+        recovered_prediction = _normalize_prediction(recovered_prediction, fallback_scene_id=scene_id)
+        source_class = _classify_source_class(recovered_prediction)
+        return recovered_prediction, {
+            "selected_from": "metadata_relation_recovery",
+            "source_class": source_class,
+            "evidence_level": _relation_evidence_level(recovered_prediction),
+            "has_structured_prediction": False,
+            "trace": trace,
+        }
+
+    prediction = _build_summary_fallback_prediction(
+        scene_id=scene_id,
+        setting_name=setting_name,
+        prediction_summary=prediction_summary,
+    )
+    trace.append("summary_fallback:used")
+    return prediction, {
+        "selected_from": "prediction_summary_pre_repair",
+        "source_class": "summary_reconstructed",
+        "evidence_level": _relation_evidence_level(prediction),
+        "has_structured_prediction": False,
+        "trace": trace,
+    }
+
+
+def _candidate_prediction_payloads(setting_metadata: dict[str, Any]) -> list[tuple[str, Any]]:
+    keys = [
+        "structured_prediction_pre_repair",
+        "structured_prediction",
+        "scene_prediction_pre_repair",
+        "scene_prediction",
+        "structured_prediction_post_repair",
+        "scene_prediction_post_repair",
+    ]
+    return [(key, setting_metadata.get(key)) for key in keys]
+
+
+def _recover_prediction_from_metadata_artifacts(
+    *,
+    scene_id: str,
+    setting_name: str,
+    setting_metadata: dict[str, Any],
+    prediction_summary: Any,
+    trace: list[str],
+) -> ScenePrediction | None:
+    relation_rows = _extract_explicit_relation_rows(setting_metadata)
+    object_rows = _extract_object_rows_from_metadata(setting_metadata)
+
+    if relation_rows:
+        trace.append(f"relation_rows:recovered:{len(relation_rows)}")
+        objects = _build_objects_from_rows(
+            object_rows,
+            fallback_relation_rows=relation_rows,
+        )
+        relations = _build_relations_from_rows(relation_rows)
+        metadata = _base_recovered_metadata(
+            prediction_summary=prediction_summary,
+            source_key="metadata_relation_rows",
+            relation_count=len(relations),
+            relation_predicates=sorted({rel.predicate for rel in relations}),
+        )
+        return ScenePrediction(
+            sample_id=scene_id,
+            generator_name=f"{setting_name}_metadata_relation_recovery",
+            objects=objects,
+            relations=relations,
+            metadata=metadata,
+        )
+
+    language_export = setting_metadata.get("language_export_pre_repair")
+    if isinstance(language_export, dict):
+        relation_statements = language_export.get("relation_statements", [])
+        if isinstance(relation_statements, list):
+            parsed_relations, parsed_objects = _parse_relation_statements(relation_statements)
+            if parsed_relations:
+                trace.append(f"language_export_relation_statements:recovered:{len(parsed_relations)}")
+                objects = _build_objects_from_rows(
+                    object_rows,
+                    fallback_relation_rows=parsed_relations,
+                    parsed_objects=parsed_objects,
+                )
+                relations = _build_relations_from_rows(parsed_relations)
+                metadata = _base_recovered_metadata(
+                    prediction_summary=prediction_summary,
+                    source_key="language_export_pre_repair.relation_statements",
+                    relation_count=len(relations),
+                    relation_predicates=sorted({rel.predicate for rel in relations}),
+                )
+                return ScenePrediction(
+                    sample_id=scene_id,
+                    generator_name=f"{setting_name}_language_relation_recovery",
+                    objects=objects,
+                    relations=relations,
+                    metadata=metadata,
+                )
+
+    return None
+
+
+def _build_summary_fallback_prediction(
+    *,
+    scene_id: str,
+    setting_name: str,
     prediction_summary: Any,
 ) -> ScenePrediction:
-    if isinstance(prediction_payload, dict):
-        try:
-            return ScenePrediction.from_dict(prediction_payload)
-        except Exception:
-            pass
-
-    # Graceful fallback for older reports without structured predictions.
     object_labels: list[str] = []
     relation_predicates: list[str] = []
     object_count = 0
@@ -278,25 +425,13 @@ def _resolve_prediction(
     objects: list[SceneObject] = []
     for index in range(max(object_count, len(object_labels))):
         label = object_labels[index] if index < len(object_labels) else "object"
-        objects.append(
-            SceneObject(
-                object_id=f"{label}_{index}",
-                label=label,
-                position=Point3D(0.0, 0.0, 0.0),
-                size=Point3D(1.0, 1.0, 1.0),
-                confidence=0.5,
-                attributes={
-                    "reconstructed_from_prediction_summary": True,
-                    "geometry_unavailable": True,
-                },
-            )
-        )
+        objects.append(_placeholder_object(object_id=f"{label}_{index}", label=label))
 
-    # Predicates are preserved only as metadata when full relation structure is missing.
     metadata = {
         "reconstructed_from_prediction_summary": True,
         "relation_predicates": relation_predicates,
         "relation_count_hint": relation_count,
+        "prediction_source_class": "summary_reconstructed",
     }
     return ScenePrediction(
         sample_id=scene_id,
@@ -335,6 +470,317 @@ def _enrich_prediction_with_summary_hints(
 
     prediction.metadata = metadata
     return prediction
+
+
+def _normalize_prediction(prediction: ScenePrediction, *, fallback_scene_id: str) -> ScenePrediction:
+    sample_id = str(prediction.sample_id or fallback_scene_id)
+    generator_name = str(prediction.generator_name or "unknown_generator")
+    metadata = dict(prediction.metadata) if isinstance(prediction.metadata, dict) else {}
+
+    normalized_objects: list[SceneObject] = []
+    for index, obj in enumerate(prediction.objects):
+        obj_attributes = dict(obj.attributes) if isinstance(obj.attributes, dict) else {}
+        normalized_objects.append(
+            SceneObject(
+                object_id=str(obj.object_id or f"object_{index}"),
+                label=str(obj.label or "object"),
+                position=Point3D(float(obj.position.x), float(obj.position.y), float(obj.position.z)),
+                size=Point3D(
+                    max(float(obj.size.x), 0.0),
+                    max(float(obj.size.y), 0.0),
+                    max(float(obj.size.z), 0.0),
+                ),
+                confidence=float(obj.confidence),
+                attributes=obj_attributes,
+            )
+        )
+
+    normalized_relations = []
+    for rel in prediction.relations:
+        subject_id = str(rel.subject_id).strip()
+        object_id = str(rel.object_id).strip()
+        predicate = str(rel.predicate).strip()
+        if not subject_id or not object_id or not predicate:
+            continue
+        normalized_relations.append(rel)
+
+    return ScenePrediction(
+        sample_id=sample_id,
+        generator_name=generator_name,
+        objects=normalized_objects,
+        relations=normalized_relations,
+        metadata=metadata,
+    )
+
+
+def _classify_source_class(prediction: ScenePrediction) -> str:
+    if prediction.relations:
+        return "explicit_structured_prediction"
+    metadata = prediction.metadata if isinstance(prediction.metadata, dict) else {}
+    hint_count = _safe_int(metadata.get("relation_count_hint"), 0) or 0
+    hint_predicates = metadata.get("relation_predicates", [])
+    if hint_count > 0 or (isinstance(hint_predicates, list) and bool(hint_predicates)):
+        return "structured_prediction_with_hint_only"
+    if bool(metadata.get("reconstructed_from_prediction_summary", False)):
+        return "summary_reconstructed"
+    return "structured_prediction_with_hint_only"
+
+
+def _relation_evidence_level(prediction: ScenePrediction) -> str:
+    if prediction.relations:
+        return "explicit"
+    metadata = prediction.metadata if isinstance(prediction.metadata, dict) else {}
+    hint_count = _safe_int(metadata.get("relation_count_hint"), 0) or 0
+    hint_predicates = metadata.get("relation_predicates", [])
+    if hint_count > 0 or (isinstance(hint_predicates, list) and bool(hint_predicates)):
+        return "hinted"
+    return "none"
+
+
+def _extract_explicit_relation_rows(setting_metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    keys = [
+        "relations_pre_repair",
+        "relation_tuples_pre_repair",
+        "relation_tuples",
+        "explicit_relations",
+        "scene_relations",
+        "prediction_relations",
+    ]
+    for key in keys:
+        rows = setting_metadata.get(key)
+        if not isinstance(rows, list):
+            continue
+        normalized = _normalize_relation_rows(rows)
+        if normalized:
+            return normalized
+    return []
+
+
+def _extract_object_rows_from_metadata(setting_metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    keys = [
+        "objects_pre_repair",
+        "scene_objects",
+        "prediction_objects",
+        "objects",
+    ]
+    for key in keys:
+        rows = setting_metadata.get(key)
+        if not isinstance(rows, list):
+            continue
+        normalized = _normalize_object_rows(rows)
+        if normalized:
+            return normalized
+    return []
+
+
+def _normalize_relation_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        subject_id = _first_nonempty_str(row.get("subject_id"), row.get("subject"), row.get("source_id"))
+        object_id = _first_nonempty_str(row.get("object_id"), row.get("object"), row.get("target_id"))
+        predicate = _first_nonempty_str(row.get("predicate"), row.get("relation"), row.get("type"))
+        if not subject_id or not object_id or not predicate:
+            continue
+        score = _safe_float(row.get("score"), 1.0) or 1.0
+        metadata = row.get("metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+        normalized.append(
+            {
+                "subject_id": subject_id,
+                "predicate": predicate,
+                "object_id": object_id,
+                "score": score,
+                "metadata": metadata,
+            }
+        )
+    return normalized
+
+
+def _normalize_object_rows(rows: list[Any]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        object_id = _first_nonempty_str(row.get("object_id"), row.get("id"))
+        label = _first_nonempty_str(row.get("label"), row.get("category"), row.get("class_name"), default="object")
+        if not object_id:
+            continue
+        normalized.append({"object_id": object_id, "label": label, "raw": row})
+    return normalized
+
+
+def _build_objects_from_rows(
+    object_rows: list[dict[str, Any]],
+    *,
+    fallback_relation_rows: list[dict[str, Any]],
+    parsed_objects: dict[str, str] | None = None,
+) -> list[SceneObject]:
+    by_id: dict[str, SceneObject] = {}
+    for row in object_rows:
+        object_id = str(row.get("object_id", "")).strip()
+        label = str(row.get("label", "object")).strip() or "object"
+        if not object_id:
+            continue
+        by_id[object_id] = _placeholder_object(object_id=object_id, label=label)
+
+    if parsed_objects:
+        for object_id, label in parsed_objects.items():
+            if object_id not in by_id:
+                by_id[object_id] = _placeholder_object(object_id=object_id, label=label)
+
+    for rel in fallback_relation_rows:
+        for object_id_key in ("subject_id", "object_id"):
+            object_id = str(rel.get(object_id_key, "")).strip()
+            if not object_id or object_id in by_id:
+                continue
+            label_from_meta = None
+            rel_meta = rel.get("metadata", {})
+            if isinstance(rel_meta, dict):
+                label_from_meta = rel_meta.get(
+                    "subject_label" if object_id_key == "subject_id" else "object_label"
+                )
+            label = _guess_label_from_object_id(object_id, default=_safe_str(label_from_meta, "object"))
+            by_id[object_id] = _placeholder_object(object_id=object_id, label=label)
+    return sorted(by_id.values(), key=lambda obj: (obj.label, obj.object_id))
+
+
+def _build_relations_from_rows(rows: list[dict[str, Any]]) -> list[Any]:
+    from self_calibrating_spatiallm.artifacts import SceneRelation
+
+    relations: list[Any] = []
+    for row in rows:
+        metadata = row.get("metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+        relations.append(
+            SceneRelation(
+                subject_id=str(row["subject_id"]),
+                predicate=str(row["predicate"]),
+                object_id=str(row["object_id"]),
+                score=float(row.get("score", 1.0)),
+                metadata=metadata,
+            )
+        )
+    return relations
+
+
+def _parse_relation_statements(
+    relation_statements: list[Any],
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    import re
+
+    pattern = re.compile(
+        r"^(?P<subject_label>[^\[]+)\[(?P<subject_id>[^\]]+)\]\s+"
+        r"(?P<predicate>\S+)\s+"
+        r"(?P<object_label>[^\[]+)\[(?P<object_id>[^\]]+)\]"
+        r"(?:\s+\(score=(?P<score>[-+]?[0-9]*\.?[0-9]+)\))?$"
+    )
+    relations: list[dict[str, Any]] = []
+    objects: dict[str, str] = {}
+    for raw in relation_statements:
+        text = str(raw).strip()
+        if not text:
+            continue
+        match = pattern.match(text)
+        if not match:
+            continue
+        subject_id = match.group("subject_id").strip()
+        object_id = match.group("object_id").strip()
+        predicate = match.group("predicate").strip()
+        if not subject_id or not object_id or not predicate:
+            continue
+        subject_label = match.group("subject_label").strip() or _guess_label_from_object_id(subject_id, default="object")
+        object_label = match.group("object_label").strip() or _guess_label_from_object_id(object_id, default="object")
+        score = _safe_float(match.group("score"), 1.0) or 1.0
+        relations.append(
+            {
+                "subject_id": subject_id,
+                "predicate": predicate,
+                "object_id": object_id,
+                "score": score,
+                "metadata": {
+                    "subject_label": subject_label,
+                    "object_label": object_label,
+                    "source": "relation_statements",
+                },
+            }
+        )
+        objects[subject_id] = subject_label
+        objects[object_id] = object_label
+    return relations, objects
+
+
+def _base_recovered_metadata(
+    *,
+    prediction_summary: Any,
+    source_key: str,
+    relation_count: int,
+    relation_predicates: list[str],
+) -> dict[str, Any]:
+    metadata = {
+        "reconstructed_from_prediction_summary": False,
+        "recovered_from_metadata": True,
+        "recovery_source": source_key,
+        "relation_count_hint": relation_count,
+        "relation_predicates": relation_predicates,
+        "prediction_source_class": "explicit_structured_prediction" if relation_count > 0 else "structured_prediction_with_hint_only",
+    }
+    if isinstance(prediction_summary, dict):
+        object_count = _safe_int(prediction_summary.get("object_count"))
+        if object_count is not None:
+            metadata["object_count_hint"] = object_count
+    return metadata
+
+
+def _placeholder_object(*, object_id: str, label: str) -> SceneObject:
+    return SceneObject(
+        object_id=object_id,
+        label=label,
+        position=Point3D(0.0, 0.0, 0.0),
+        size=Point3D(1.0, 1.0, 1.0),
+        confidence=0.5,
+        attributes={
+            "geometry_unavailable": True,
+            "approximate_from_metadata": True,
+        },
+    )
+
+
+def _guess_label_from_object_id(object_id: str, default: str = "object") -> str:
+    object_id = str(object_id).strip()
+    if not object_id:
+        return default
+    token = object_id.split("_", 1)[0].strip().lower()
+    if token:
+        return token
+    return default
+
+
+def _first_nonempty_str(*values: Any, default: str | None = None) -> str | None:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return default
+
+
+def _safe_str(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    text = str(value).strip()
+    return text if text else default
+
+
+def _safe_float(value: Any, default: float | None = None) -> float | None:
+    try:
+        return float(value)
+    except Exception:
+        return default
 
 
 def _build_alignment_rows(alignment_map: dict[str, dict[str, dict[str, Any]]]) -> list[dict[str, Any]]:
@@ -403,6 +849,10 @@ def _build_pairwise_comparison(
         - _safe_int(base.get("object_count"), 0),
         "relation_count_delta": _safe_int(target.get("relation_count"), 0)
         - _safe_int(base.get("relation_count"), 0),
+        "relation_tuple_count_delta": _safe_int(target.get("relation_count"), 0)
+        - _safe_int(base.get("relation_count"), 0),
+        "relation_statement_count_delta": _safe_int(target.get("relation_statement_count"), 0)
+        - _safe_int(base.get("relation_statement_count"), 0),
         "object_labels_added": sorted(target_labels - base_labels),
         "object_labels_removed": sorted(base_labels - target_labels),
         "relation_predicates_added": sorted(target_predicates - base_predicates),
@@ -411,8 +861,14 @@ def _build_pairwise_comparison(
         "relation_hint_predicates_removed": sorted(base_hint_predicates - target_hint_predicates),
         "base_relation_evidence_level": str(base.get("relation_evidence_level", "unknown")),
         "target_relation_evidence_level": str(target.get("relation_evidence_level", "unknown")),
+        "relation_evidence_transition": (
+            f"{str(base.get('relation_evidence_level', 'unknown'))}"
+            f"->{str(target.get('relation_evidence_level', 'unknown'))}"
+        ),
         "base_reconstructed_from_summary": bool(base.get("reconstructed_from_prediction_summary", False)),
         "target_reconstructed_from_summary": bool(target.get("reconstructed_from_prediction_summary", False)),
+        "base_prediction_source_class": str(base.get("prediction_source_class", "unknown")),
+        "target_prediction_source_class": str(target.get("prediction_source_class", "unknown")),
     }
 
 
@@ -433,6 +889,21 @@ def _build_alignment_comparison_examples(
                 "metadata": v0_v1_diff,
             }
         )
+        transition = str(v0_v1_diff.get("relation_evidence_transition", "unknown->unknown"))
+        if transition != "unknown->unknown":
+            rows.append(
+                {
+                    "scene_id": scene_id,
+                    "task_type": "evidence_transition_qa",
+                    "question": "How did relation evidence level change from calibration_v0 to calibration_v1?",
+                    "answer": transition,
+                    "metadata": {
+                        "base_setting": "calibration_v0",
+                        "target_setting": "calibration_v1",
+                        "relation_evidence_transition": transition,
+                    },
+                }
+            )
 
     if isinstance(mock_external_diff, dict):
         labels_added = mock_external_diff.get("object_labels_added", [])
@@ -451,6 +922,21 @@ def _build_alignment_comparison_examples(
                 },
             }
         )
+        transition = str(mock_external_diff.get("relation_evidence_transition", "unknown->unknown"))
+        if transition != "unknown->unknown":
+            rows.append(
+                {
+                    "scene_id": scene_id,
+                    "task_type": "evidence_transition_qa",
+                    "question": "How did relation evidence level change from mock_generator to external_generator?",
+                    "answer": transition,
+                    "metadata": {
+                        "base_setting": "mock_generator",
+                        "target_setting": "external_generator",
+                        "relation_evidence_transition": transition,
+                    },
+                }
+            )
     return rows
 
 
@@ -472,11 +958,13 @@ def _render_pairwise_delta_answer(diff: dict[str, Any]) -> str:
     parts = [
         f"object_count_delta={diff.get('object_count_delta', 0)}",
         f"relation_count_delta={diff.get('relation_count_delta', 0)}",
+        f"relation_tuple_count_delta={diff.get('relation_tuple_count_delta', 0)}",
+        f"relation_statement_count_delta={diff.get('relation_statement_count_delta', 0)}",
         f"labels_added={','.join(labels_added) if labels_added else 'none'}",
         f"labels_removed={','.join(labels_removed) if labels_removed else 'none'}",
         f"predicates_added={','.join(predicates_added) if predicates_added else 'none'}",
         f"predicates_removed={','.join(predicates_removed) if predicates_removed else 'none'}",
-        f"relation_evidence={diff.get('base_relation_evidence_level')}->{diff.get('target_relation_evidence_level')}",
+        f"relation_evidence={diff.get('relation_evidence_transition')}",
     ]
     return "; ".join(parts)
 
@@ -510,6 +998,14 @@ def _build_summary(
     num_explicit_relation_examples = sum(
         1 for row in scene_setting_rows if row.get("relation_evidence_level") == "explicit"
     )
+    source_class_counts: dict[str, int] = {}
+    for row in scene_setting_rows:
+        metadata = row.get("metadata", {})
+        source_class = None
+        if isinstance(metadata, dict):
+            source_class = metadata.get("prediction_source_class")
+        key = str(source_class or "unknown")
+        source_class_counts[key] = source_class_counts.get(key, 0) + 1
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -530,6 +1026,7 @@ def _build_summary(
         "num_reconstructed_scene_setting_examples": num_reconstructed_examples,
         "num_hinted_relation_only_examples": num_hinted_relation_only_examples,
         "num_explicit_relation_examples": num_explicit_relation_examples,
+        "prediction_source_class_counts": source_class_counts,
         "setting_counts": setting_counts,
         "setting_export_counts": setting_export_counts,
         "required_setting_coverage": required_coverage,
@@ -565,6 +1062,15 @@ def _render_summary_markdown(summary: dict[str, Any]) -> str:
     if isinstance(required, dict):
         for setting in CORE_SETTINGS:
             lines.append(f"- {setting}: `{required.get(setting, 0)}`")
+
+    lines.append("")
+    lines.append("## Prediction Source Class Counts")
+    source_class_counts = summary.get("prediction_source_class_counts", {})
+    if isinstance(source_class_counts, dict) and source_class_counts:
+        for name in sorted(source_class_counts.keys()):
+            lines.append(f"- {name}: `{source_class_counts[name]}`")
+    else:
+        lines.append("- unknown: `0`")
 
     lines.append("")
     lines.append("## Setting Counts")

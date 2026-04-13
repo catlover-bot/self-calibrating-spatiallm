@@ -377,6 +377,7 @@ It supports:
 - weak/strong grounding text pairs (avoids fake geometric precision for summary-only exports)
 - JSONL dataset export aligned by `scene_id` and setting (`v0`, `v1`, `v1_plus_repair`, `mock`, `external`)
 - alignment export includes deterministic pairwise setting deltas (labels/relations/evidence level)
+- provenance classes are explicit: `explicit_structured_prediction`, `structured_prediction_with_hint_only`, `summary_reconstructed`
 
 Build language artifacts from an existing evaluation report:
 

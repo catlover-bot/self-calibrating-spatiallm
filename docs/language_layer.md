@@ -12,6 +12,12 @@ This layer makes that contribution NLP-usable without changing the calibration e
 The goal is not to claim language-model performance directly.
 The goal is to expose calibration effects in language-usable representations.
 
+Source selection is explicit and inspectable:
+
+1. `explicit_structured_prediction`
+2. `structured_prediction_with_hint_only`
+3. `summary_reconstructed`
+
 ## Why This Matters
 
 The core question remains:
@@ -45,6 +51,7 @@ With this layer, that question can be analyzed through language-facing outputs:
   - builds language JSONL files from `evaluation_report.json`
   - supports aligned per-scene comparison across settings
   - exports pairwise setting-difference summaries and deterministic comparison QA
+  - attempts relation/object recovery from upstream metadata artifacts before summary fallback
 
 - `scripts/export_scene_prediction_language.py`
   - exports one `ScenePrediction` artifact into language-facing forms
