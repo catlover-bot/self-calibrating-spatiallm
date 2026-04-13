@@ -363,6 +363,44 @@ Detailed guide:
 
 - `docs/public_datasets.md`
 
+## Language-Facing Exports
+
+This repository now includes a deterministic language-facing layer on top of structured scene outputs.
+
+It supports:
+
+- scene summary text
+- object list text
+- relation statements text
+- simple scene-grounded QA examples
+- simple grounding/instruction text pairs
+- JSONL dataset export aligned by `scene_id` and setting (`v0`, `v1`, `v1_plus_repair`, `mock`, `external`)
+
+Build language artifacts from an existing evaluation report:
+
+```bash
+make build-language-dataset \
+  LANG_EVAL_REPORT=outputs/eval_pack/latest/evaluation_report.json \
+  LANG_OUTPUT_DIR=outputs/eval_pack/latest/language
+```
+
+Export one scene prediction artifact:
+
+```bash
+make export-scene-language \
+  SCENE_PREDICTION=outputs/runs/single_scene_real/04_scene_prediction.json
+```
+
+Inspect first:
+
+- `outputs/eval_pack/latest/language/language_export_summary.md`
+- `outputs/eval_pack/latest/language/language_alignment_examples.jsonl`
+- `outputs/eval_pack/latest/language/language_scene_examples.jsonl`
+
+See:
+
+- `docs/language_layer.md`
+
 ## Failure Taxonomy
 
 Failure categories include:

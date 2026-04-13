@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LanguageSceneExample",
+  "type": "object",
+  "required": [
+    "scene_id",
+    "setting",
+    "structured_prediction",
+    "scene_summary_text",
+    "relation_text",
+    "qa_examples",
+    "grounding_examples",
+    "metadata"
+  ],
+  "properties": {
+    "scene_id": {"type": "string"},
+    "setting": {"type": "string"},
+    "source_type": {"type": ["string", "null"]},
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "structured_prediction": {"type": "object"},
+    "scene_summary_text": {"type": "string"},
+    "object_list_text": {"type": "string"},
+    "relation_text": {"type": "string"},
+    "scene_paragraph_text": {"type": "string"},
+    "qa_examples": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "grounding_examples": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "metadata": {"type": "object"}
+  },
+  "additionalProperties": false
+}
+

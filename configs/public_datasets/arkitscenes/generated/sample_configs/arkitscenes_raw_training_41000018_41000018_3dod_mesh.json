@@ -1,0 +1,18 @@
+{
+  "calibration_mode": "v1",
+  "compare_with_external_generator": false,
+  "expected_unit": "meter",
+  "external_timeout_sec": 300,
+  "file_path": "/private/tmp/arkitscenes_demo/raw/Training/41000018/41000018_3dod_mesh.ply",
+  "generator_mode": "mock",
+  "metadata_path": null,
+  "normalize_scene": true,
+  "output_dir": "/Users/hirotaka-m/self-calibrating-spatiallm/outputs/runs/public_arkitscenes/arkitscenes_raw_training_41000018_41000018_3dod_mesh",
+  "scale_hint": null,
+  "scene_id": "arkitscenes_raw_training_41000018_41000018_3dod_mesh",
+  "source_type": "ply",
+  "spatiallm_command": null,
+  "spatiallm_command_env_var": "SCSLM_SPATIALLM_COMMAND",
+  "spatiallm_export_format": "json",
+  "spatiallm_output_json": null
+}

@@ -1,0 +1,182 @@
+{
+  "dataset_root": "/private/tmp/arkitscenes_demo",
+  "num_candidates_discovered": 25,
+  "num_entries_selected": 25,
+  "scene_rows": [
+    {
+      "index": 1,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000000/41000000_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000000_41000000_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000000_41000000_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 2,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000001/41000001_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000001_41000001_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000001_41000001_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 3,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000002/41000002_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000002_41000002_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000002_41000002_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 4,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000003/41000003_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000003_41000003_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000003_41000003_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 5,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000004/41000004_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000004_41000004_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000004_41000004_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 6,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000005/41000005_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000005_41000005_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000005_41000005_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 7,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000006/41000006_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000006_41000006_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000006_41000006_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 8,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000007/41000007_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000007_41000007_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000007_41000007_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 9,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000008/41000008_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000008_41000008_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000008_41000008_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 10,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000009/41000009_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000009_41000009_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000009_41000009_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 11,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000010/41000010_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000010_41000010_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000010_41000010_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 12,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000011/41000011_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000011_41000011_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000011_41000011_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 13,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000012/41000012_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000012_41000012_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000012_41000012_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 14,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000013/41000013_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000013_41000013_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000013_41000013_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 15,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000014/41000014_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000014_41000014_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000014_41000014_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 16,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000015/41000015_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000015_41000015_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000015_41000015_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 17,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000016/41000016_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000016_41000016_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000016_41000016_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 18,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000017/41000017_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000017_41000017_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000017_41000017_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 19,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000018/41000018_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000018_41000018_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000018_41000018_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 20,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000019/41000019_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000019_41000019_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000019_41000019_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 21,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000020/41000020_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000020_41000020_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000020_41000020_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 22,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000021/41000021_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000021_41000021_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000021_41000021_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 23,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000022/41000022_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000022_41000022_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000022_41000022_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 24,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000023/41000023_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000023_41000023_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000023_41000023_3dod_mesh",
+      "source_type": "ply"
+    },
+    {
+      "index": 25,
+      "point_cloud_path": "/private/tmp/arkitscenes_demo/raw/Training/41000024/41000024_3dod_mesh.ply",
+      "sample_config_path": "/Users/hirotaka-m/self-calibrating-spatiallm/configs/public_datasets/arkitscenes/generated/sample_configs/arkitscenes_raw_training_41000024_41000024_3dod_mesh.json",
+      "scene_id": "arkitscenes_raw_training_41000024_41000024_3dod_mesh",
+      "source_type": "ply"
+    }
+  ]
+}

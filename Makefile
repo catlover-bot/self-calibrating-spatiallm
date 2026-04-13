@@ -7,8 +7,11 @@ ARKITSCENES_SEED ?= 13
 PUBLIC_MANIFEST ?= configs/public_datasets/arkitscenes/generated/arkitscenes_subset_manifest.json
 PUBLIC_EVAL_OUTPUT ?= outputs/eval_pack/public_medium_latest
 PUBLIC_BUILD_ARGS ?=
+LANG_EVAL_REPORT ?= outputs/eval_pack/latest/evaluation_report.json
+LANG_OUTPUT_DIR ?= outputs/eval_pack/latest/language
+SCENE_PREDICTION ?= outputs/runs/single_scene_real/04_scene_prediction.json
 
-.PHONY: setup setup-true-v1 install-true-v1 lint format typecheck test check pipeline pipeline-multi eval-pack failure-analysis check-env eval-v1 failure-v1 debug-v1 v1-workflow post-true-v1-analysis build-arkitscenes-manifest validate-public-manifest public-workflow
+.PHONY: setup setup-true-v1 install-true-v1 lint format typecheck test check pipeline pipeline-multi eval-pack failure-analysis check-env eval-v1 failure-v1 debug-v1 v1-workflow post-true-v1-analysis build-arkitscenes-manifest validate-public-manifest public-workflow build-language-dataset export-scene-language
 
 setup:
 	$(PYTHON) -m venv .venv
@@ -73,3 +76,9 @@ validate-public-manifest:
 
 public-workflow:
 	MANIFEST_PATH=$(PUBLIC_MANIFEST) EVAL_OUTPUT_DIR=$(PUBLIC_EVAL_OUTPUT) bash scripts/run_public_dataset_workflow.sh
+
+build-language-dataset:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/build_language_dataset.py --evaluation-report $(LANG_EVAL_REPORT) --output-dir $(LANG_OUTPUT_DIR)
+
+export-scene-language:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/export_scene_prediction_language.py --scene-prediction $(SCENE_PREDICTION)

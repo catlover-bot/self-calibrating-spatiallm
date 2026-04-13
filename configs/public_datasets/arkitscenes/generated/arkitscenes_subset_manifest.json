@@ -1,0 +1,300 @@
+{
+  "entries": [
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000000_41000000_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000001_41000001_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000002_41000002_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000003_41000003_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000004_41000004_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000005_41000005_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000006_41000006_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000007_41000007_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000008_41000008_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000009_41000009_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000010_41000010_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000011_41000011_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000012_41000012_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000013_41000013_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000014_41000014_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000015_41000015_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000016_41000016_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000017_41000017_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000018_41000018_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000019_41000019_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000020_41000020_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000021_41000021_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000022_41000022_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000023_41000023_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    },
+    {
+      "annotation_path": null,
+      "notes": "auto-generated from local ARKitScenes assets",
+      "sample_config_path": "sample_configs/arkitscenes_raw_training_41000024_41000024_3dod_mesh.json",
+      "source_type": "ply",
+      "tags": [
+        "public_dataset",
+        "arkitscenes",
+        "medium_subset"
+      ]
+    }
+  ],
+  "metadata": {
+    "calibration_mode": "v1",
+    "compare_with_external_generator": false,
+    "dataset_name": "arkitscenes",
+    "dataset_root": "/private/tmp/arkitscenes_demo",
+    "external_timeout_sec": 300,
+    "generator_mode": "mock",
+    "normalize_scene": true,
+    "num_candidates_discovered": 25,
+    "num_entries_selected": 25,
+    "point_cloud_extensions": [
+      ".ply",
+      ".pcd",
+      ".npy",
+      ".npz"
+    ],
+    "seed": 13,
+    "subset_size_requested": 25
+  },
+  "name": "arkitscenes_subset_25",
+  "notes": "Auto-generated ARKitScenes public-dataset subset manifest."
+}

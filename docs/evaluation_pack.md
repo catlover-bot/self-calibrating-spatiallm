@@ -71,6 +71,7 @@ PYTHONPATH=src python scripts/run_post_true_v1_analysis.py \
 Public dataset subset workflow (ARKitScenes-first scaffold):
 
 - `docs/public_datasets.md`
+- `docs/language_layer.md`
 
 ## Compared Settings
 
@@ -158,6 +159,15 @@ Failure summaries include:
   - fallback scene list
   - top calibration-related failure categories
 
+Each successful setting also stores additive language-facing metadata under `setting.metadata`:
+
+- `structured_prediction_pre_repair`
+- `structured_prediction_post_repair`
+- `language_export_pre_repair`
+- `language_export_post_repair`
+
+These fields are deterministic exports derived from structured scene predictions and can be used to build JSONL artifacts for language-facing experiments without changing calibration evaluation schema.
+
 Use these to inspect where gains come from across calibration and repair settings.
 
 Post-run analysis adds:
@@ -197,3 +207,11 @@ Interpretation guidance:
   - `external_propagation_summary.md` (external execution status + pre-repair external-vs-mock deltas)
   - `stratified_v0_v1_summary.md`
   - then check `scene_level_delta_report.md` prediction/propagation sections to verify whether calibration changes reached generator inputs and pre-repair predictions.
+
+Language-facing post-processing (run separately, not part of default eval workflow):
+
+```bash
+PYTHONPATH=src python scripts/build_language_dataset.py \
+  --evaluation-report outputs/eval_pack/latest/evaluation_report.json \
+  --output-dir outputs/eval_pack/latest/language
+```

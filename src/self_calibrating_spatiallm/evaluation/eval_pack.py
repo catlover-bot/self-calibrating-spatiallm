@@ -39,6 +39,7 @@ from self_calibrating_spatiallm.evaluation.recommendations import (
 )
 from self_calibrating_spatiallm.generation import MockSpatialLMGenerator, SpatialLMExternalGenerator
 from self_calibrating_spatiallm.io import PointCloudLoadOptions, load_point_cloud_sample
+from self_calibrating_spatiallm.language.exports import export_scene_prediction_to_language
 from self_calibrating_spatiallm.environment import collect_environment_report
 from self_calibrating_spatiallm.pipeline import SceneInputConfig
 from self_calibrating_spatiallm.repair import PassThroughRepairer, SimpleRuleRepairer
@@ -562,6 +563,10 @@ def _run_setting(
         if not isinstance(propagation_diagnostics, dict):
             propagation_diagnostics = {}
         prediction_summary = _summarize_prediction(prediction)
+        prediction_serialized = _serialize_scene_prediction(prediction)
+        repaired_prediction_serialized = _serialize_scene_prediction(repair_result.repaired_scene)
+        language_export_pre_repair = export_scene_prediction_to_language(prediction)
+        language_export_post_repair = export_scene_prediction_to_language(repair_result.repaired_scene)
         calibrated_input_summary = _summarize_calibrated_input(calibrated)
         generator_execution_summary = _summarize_generator_execution(generator.get_last_execution_info())
 
@@ -578,6 +583,10 @@ def _run_setting(
                 "repairer_name": repairer.name,
                 "calibration_execution": calibration_execution,
                 "prediction_summary_pre_repair": prediction_summary,
+                "structured_prediction_pre_repair": prediction_serialized,
+                "structured_prediction_post_repair": repaired_prediction_serialized,
+                "language_export_pre_repair": language_export_pre_repair,
+                "language_export_post_repair": language_export_post_repair,
                 "calibrated_input_summary": calibrated_input_summary,
                 "propagation_diagnostics": propagation_diagnostics,
                 "generator_execution_summary": generator_execution_summary,
@@ -625,6 +634,58 @@ def _summarize_prediction(prediction: Any) -> dict[str, Any]:
         "relation_count": len(relations) if isinstance(relations, list) else 0,
         "object_labels": object_labels,
         "relation_predicates": relation_predicates,
+    }
+
+
+def _serialize_scene_prediction(prediction: Any) -> dict[str, Any]:
+    objects = getattr(prediction, "objects", [])
+    relations = getattr(prediction, "relations", [])
+    if not isinstance(objects, list):
+        objects = []
+    if not isinstance(relations, list):
+        relations = []
+
+    object_rows: list[dict[str, Any]] = []
+    for obj in objects:
+        position = getattr(obj, "position", None)
+        size = getattr(obj, "size", None)
+        object_rows.append(
+            {
+                "object_id": str(getattr(obj, "object_id", "unknown")),
+                "label": str(getattr(obj, "label", "unknown")),
+                "position": {
+                    "x": float(getattr(position, "x", 0.0)) if position is not None else 0.0,
+                    "y": float(getattr(position, "y", 0.0)) if position is not None else 0.0,
+                    "z": float(getattr(position, "z", 0.0)) if position is not None else 0.0,
+                },
+                "size": {
+                    "x": float(getattr(size, "x", 0.0)) if size is not None else 0.0,
+                    "y": float(getattr(size, "y", 0.0)) if size is not None else 0.0,
+                    "z": float(getattr(size, "z", 0.0)) if size is not None else 0.0,
+                },
+                "confidence": float(getattr(obj, "confidence", 1.0)),
+                "attributes": dict(getattr(obj, "attributes", {}) or {}),
+            }
+        )
+
+    relation_rows: list[dict[str, Any]] = []
+    for rel in relations:
+        relation_rows.append(
+            {
+                "subject_id": str(getattr(rel, "subject_id", "unknown")),
+                "predicate": str(getattr(rel, "predicate", "unknown")),
+                "object_id": str(getattr(rel, "object_id", "unknown")),
+                "score": float(getattr(rel, "score", 1.0)),
+                "metadata": dict(getattr(rel, "metadata", {}) or {}),
+            }
+        )
+
+    return {
+        "sample_id": str(getattr(prediction, "sample_id", "unknown_scene")),
+        "generator_name": str(getattr(prediction, "generator_name", "unknown_generator")),
+        "objects": object_rows,
+        "relations": relation_rows,
+        "metadata": {},
     }
 
 
