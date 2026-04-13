@@ -79,7 +79,10 @@ def test_plane_aware_v1_horizontal_ambiguity_guardrail() -> None:
 
     assert execution.get("partial_calibration_applied") is True
     assert horizontal_guardrail.get("triggered") is True
-    assert diagnostics.get("horizontal_axis_source") == "up_only_horizontal_guardrail"
+    assert diagnostics.get("horizontal_axis_source") in {
+        "up_only_horizontal_guardrail",
+        "analysis_projected_partial_guardrail",
+    }
     assert horizontal_guardrail.get("decision_mode") == "partial"
     assert isinstance(horizontal_guardrail.get("dynamic_min_horizontal_confidence_for_acceptance"), float)
 
@@ -117,7 +120,7 @@ def test_horizontal_decision_dynamic_thresholding() -> None:
         max_manhattan_ambiguity_for_strong_acceptance=0.95,
     )
     assert decision["mode"] == "partial"
-    assert float(decision["dynamic_min_horizontal_confidence_for_acceptance"]) > 0.45
+    assert float(decision["dynamic_min_horizontal_confidence_for_acceptance"]) > 0.44
 
     strong = _decide_horizontal_strategy(
         horizontal_confidence=0.80,
@@ -130,6 +133,24 @@ def test_horizontal_decision_dynamic_thresholding() -> None:
     )
     assert strong["mode"] == "accept"
     assert strong["accepted_by"] == "strong_confidence_override"
+
+
+def test_horizontal_decision_structural_consensus_override() -> None:
+    decision = _decide_horizontal_strategy(
+        horizontal_confidence=0.33,
+        horizontal_ambiguity=0.90,
+        min_horizontal_confidence=0.15,
+        min_horizontal_confidence_for_acceptance=0.35,
+        max_manhattan_ambiguity_for_acceptance=0.85,
+        strong_horizontal_confidence_for_ambiguous_acceptance=0.70,
+        max_manhattan_ambiguity_for_strong_acceptance=0.95,
+        primary_wall_score=0.95,
+        secondary_wall_score=0.15,
+        unique_orientation_count=2,
+    )
+    assert decision["mode"] == "accept"
+    assert decision["accepted_by"] == "structural_consensus"
+    assert float(decision["structural_strength"]) > 0.70
 
 
 def test_reliability_scoring_distinguishes_modes() -> None:
@@ -161,6 +182,33 @@ def test_reliability_scoring_distinguishes_modes() -> None:
     assert full_rel > partial_rel > fallback_rel
     assert partial_rel > 0.55
     assert breakdown["reliability_mode"] == "degraded_fallback"
+
+
+def test_reliability_rewards_analysis_projected_partial_strategy() -> None:
+    rel_up_only, _ = _compute_reliability_v1_3(
+        up_confidence=0.72,
+        horizontal_confidence=0.46,
+        manhattan_ambiguity=0.90,
+        reliability_mode="safe_partial_calibration",
+        up_guardrail_applied=False,
+        horizontal_decision_mode="partial",
+        horizontal_evidence_strength=0.55,
+        effective_manhattan_ambiguity=0.82,
+        partial_axis_strategy="up_only",
+    )
+    rel_analysis, breakdown = _compute_reliability_v1_3(
+        up_confidence=0.72,
+        horizontal_confidence=0.46,
+        manhattan_ambiguity=0.90,
+        reliability_mode="safe_partial_calibration",
+        up_guardrail_applied=False,
+        horizontal_decision_mode="partial",
+        horizontal_evidence_strength=0.55,
+        effective_manhattan_ambiguity=0.82,
+        partial_axis_strategy="analysis_projected",
+    )
+    assert rel_analysis > rel_up_only
+    assert "analysis_projected_partial_bonus" in breakdown["reasons"]
 
 
 def test_plane_role_assignment_and_ranking_diagnostics_present() -> None:

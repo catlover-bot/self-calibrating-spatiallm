@@ -112,6 +112,9 @@ class PlaneAwareCalibratorV1(Calibrator):
             "max_manhattan_ambiguity_for_strong_acceptance": (
                 self.max_manhattan_ambiguity_for_strong_acceptance
             ),
+            "primary_wall_score": 0.0,
+            "secondary_wall_score": 0.0,
+            "unique_orientation_count": 0,
         }
 
         # v1.1 guardrail: avoid accepting a high-disagreement up-axis when evidence is not strong.
@@ -157,6 +160,14 @@ class PlaneAwareCalibratorV1(Calibrator):
             up_confidence = float(confidence["up_axis"])
 
         horizontal_ambiguity = float(analysis.get("manhattan_ambiguity", 0.0))
+        horizontal_evidence = analysis.get("horizontal_evidence", {})
+        primary_wall_score = 0.0
+        secondary_wall_score = 0.0
+        unique_orientation_count = 0
+        if isinstance(horizontal_evidence, dict):
+            primary_wall_score = float(horizontal_evidence.get("primary_final_score", 0.0) or 0.0)
+            secondary_wall_score = float(horizontal_evidence.get("secondary_final_score", 0.0) or 0.0)
+            unique_orientation_count = int(horizontal_evidence.get("unique_orientation_count", 0) or 0)
         horizontal_decision = _decide_horizontal_strategy(
             horizontal_confidence=horizontal_confidence,
             horizontal_ambiguity=horizontal_ambiguity,
@@ -167,13 +178,23 @@ class PlaneAwareCalibratorV1(Calibrator):
                 self.strong_horizontal_confidence_for_ambiguous_acceptance
             ),
             max_manhattan_ambiguity_for_strong_acceptance=self.max_manhattan_ambiguity_for_strong_acceptance,
+            primary_wall_score=primary_wall_score,
+            secondary_wall_score=secondary_wall_score,
+            unique_orientation_count=unique_orientation_count,
         )
         horizontal_guardrail_details.update(
             {
+                "primary_wall_score": float(primary_wall_score),
+                "secondary_wall_score": float(secondary_wall_score),
+                "unique_orientation_count": int(unique_orientation_count),
                 "dynamic_min_horizontal_confidence_for_acceptance": float(
                     horizontal_decision.get("dynamic_min_horizontal_confidence_for_acceptance", 0.0)
                 ),
                 "evidence_strength": float(horizontal_decision.get("evidence_strength", 0.0)),
+                "structural_strength": float(horizontal_decision.get("structural_strength", 0.0)),
+                "effective_manhattan_ambiguity": float(
+                    horizontal_decision.get("effective_manhattan_ambiguity", horizontal_ambiguity)
+                ),
                 "decision_mode": horizontal_decision.get("mode", "partial"),
                 "accepted_by": horizontal_decision.get("accepted_by"),
             }
@@ -203,16 +224,28 @@ class PlaneAwareCalibratorV1(Calibrator):
                 }
             )
         elif decision_mode == "partial":
-            horizontal_axis = _project_to_plane(_fallback_horizontal(up_vector), up_vector)
-            if np.linalg.norm(horizontal_axis) <= 1e-8:
-                horizontal_axis = _project_to_plane(v0_horizontal_axis, up_vector)
-            if np.linalg.norm(horizontal_axis) <= 1e-8:
-                horizontal_axis = _fallback_horizontal(up_vector)
+            partial_axis_strategy = str(horizontal_decision.get("partial_axis_strategy", "up_only"))
+            if partial_axis_strategy == "analysis_projected":
+                horizontal_axis = _project_to_plane(horizontal_axis, up_vector)
+                if np.linalg.norm(horizontal_axis) <= 1e-8:
+                    horizontal_axis = _project_to_plane(v0_horizontal_axis, up_vector)
+                if np.linalg.norm(horizontal_axis) <= 1e-8:
+                    horizontal_axis = _fallback_horizontal(up_vector)
+                horizontal_axis_source = "analysis_projected_partial_guardrail"
+            else:
+                horizontal_axis = _project_to_plane(_fallback_horizontal(up_vector), up_vector)
+                if np.linalg.norm(horizontal_axis) <= 1e-8:
+                    horizontal_axis = _project_to_plane(v0_horizontal_axis, up_vector)
+                if np.linalg.norm(horizontal_axis) <= 1e-8:
+                    horizontal_axis = _fallback_horizontal(up_vector)
+                horizontal_axis_source = "up_only_horizontal_guardrail"
             horizontal_axis = _normalize(horizontal_axis)
-            horizontal_axis_source = "up_only_horizontal_guardrail"
             partial_calibration_applied = True
             partial_reasons.append("partial_calibration:horizontal_evidence_ambiguous")
-            confidence["horizontal_orientation"] = float(min(float(confidence.get("horizontal_orientation", 0.0)), 0.55))
+            partial_confidence_cap = float(horizontal_decision.get("partial_confidence_cap", 0.55))
+            confidence["horizontal_orientation"] = float(
+                min(float(confidence.get("horizontal_orientation", 0.0)), partial_confidence_cap)
+            )
             horizontal_confidence = float(confidence["horizontal_orientation"])
             horizontal_guardrail_details.update(
                 {
@@ -221,7 +254,11 @@ class PlaneAwareCalibratorV1(Calibrator):
                     "downgraded_to_partial_calibration": True,
                     "reasons": decision_reasons,
                     "horizontal_axis_source": horizontal_axis_source,
-                    "action": "up_only_horizontal_axis",
+                    "action": "analysis_projected_horizontal_axis"
+                    if partial_axis_strategy == "analysis_projected"
+                    else "up_only_horizontal_axis",
+                    "partial_axis_strategy": partial_axis_strategy,
+                    "partial_confidence_cap": partial_confidence_cap,
                 }
             )
         else:
@@ -254,6 +291,11 @@ class PlaneAwareCalibratorV1(Calibrator):
             reliability_mode=initial_reliability_mode,
             up_guardrail_applied=bool(guardrail_details.get("applied")),
             horizontal_decision_mode=decision_mode,
+            horizontal_evidence_strength=float(horizontal_decision.get("evidence_strength", 0.0)),
+            effective_manhattan_ambiguity=float(
+                horizontal_decision.get("effective_manhattan_ambiguity", horizontal_ambiguity)
+            ),
+            partial_axis_strategy=str(horizontal_decision.get("partial_axis_strategy", "")),
         )
         confidence["overall_reliability"] = float(overall_reliability)
 
@@ -285,6 +327,11 @@ class PlaneAwareCalibratorV1(Calibrator):
                 reliability_mode=final_reliability_mode,
                 up_guardrail_applied=bool(guardrail_details.get("applied")),
                 horizontal_decision_mode=decision_mode,
+                horizontal_evidence_strength=float(horizontal_decision.get("evidence_strength", 0.0)),
+                effective_manhattan_ambiguity=float(
+                    horizontal_decision.get("effective_manhattan_ambiguity", horizontal_ambiguity)
+                ),
+                partial_axis_strategy=str(horizontal_decision.get("partial_axis_strategy", "")),
             )
             confidence["overall_reliability"] = float(overall_reliability)
         reliability_breakdown["normalization_requested"] = bool(self.normalize_scene)
@@ -1064,32 +1111,57 @@ def _decide_horizontal_strategy(
     max_manhattan_ambiguity_for_acceptance: float,
     strong_horizontal_confidence_for_ambiguous_acceptance: float,
     max_manhattan_ambiguity_for_strong_acceptance: float,
+    primary_wall_score: float = 0.0,
+    secondary_wall_score: float = 0.0,
+    unique_orientation_count: int = 0,
 ) -> dict[str, Any]:
     conf = _clamp01(horizontal_confidence)
     ambiguity = _clamp01(horizontal_ambiguity)
+    primary_score = _clamp01(primary_wall_score)
+    secondary_score = _clamp01(secondary_wall_score)
+    score_gap = max(primary_score - secondary_score, 0.0)
+    separation = _clamp01(score_gap / max(primary_score, 1e-8))
+    orientation_bonus = 0.05 if unique_orientation_count >= 2 else 0.0
+    structural_strength = _clamp01((primary_score * 0.70) + (separation * 0.30) + orientation_bonus)
 
-    ambiguity_excess = max(0.0, ambiguity - max_manhattan_ambiguity_for_acceptance)
+    # Discount apparent ambiguity when strong structural wall evidence is available.
+    effective_ambiguity = _clamp01(ambiguity - (0.25 * structural_strength))
+
+    ambiguity_excess = max(0.0, effective_ambiguity - max_manhattan_ambiguity_for_acceptance)
     dynamic_min_confidence = float(
         max(
             min_horizontal_confidence_for_acceptance,
             min(
                 1.0,
-                min_horizontal_confidence_for_acceptance + (ambiguity_excess * 0.75),
+                min_horizontal_confidence_for_acceptance + (ambiguity_excess * 0.65),
             ),
         )
     )
-    evidence_strength = _clamp01((conf * (1.0 - (0.45 * ambiguity))) + (0.15 * (1.0 - ambiguity)))
+    evidence_strength = _clamp01(
+        (conf * (1.0 - (0.35 * effective_ambiguity)))
+        + (0.15 * (1.0 - effective_ambiguity))
+        + (0.10 * structural_strength)
+    )
 
     reasons: list[str] = []
     accepted_by: str | None = None
+    partial_axis_strategy = "up_only"
+    partial_confidence_cap = 0.55
     if conf < min_horizontal_confidence:
         mode = "fallback"
         reasons.append("hard_low_horizontal_confidence")
     else:
-        standard_accept = conf >= dynamic_min_confidence and ambiguity <= max_manhattan_ambiguity_for_acceptance
+        standard_accept = (
+            conf >= dynamic_min_confidence and effective_ambiguity <= max_manhattan_ambiguity_for_acceptance
+        )
         strong_accept = (
             conf >= strong_horizontal_confidence_for_ambiguous_acceptance
             and ambiguity <= max_manhattan_ambiguity_for_strong_acceptance
+        )
+        structural_accept = (
+            conf >= max(min_horizontal_confidence_for_acceptance - 0.05, min_horizontal_confidence)
+            and structural_strength >= 0.72
+            and effective_ambiguity <= (max_manhattan_ambiguity_for_acceptance + 0.05)
         )
         if standard_accept:
             mode = "accept"
@@ -1099,12 +1171,24 @@ def _decide_horizontal_strategy(
             mode = "accept"
             accepted_by = "strong_confidence_override"
             reasons.append("strong_confidence_override")
+        elif structural_accept:
+            mode = "accept"
+            accepted_by = "structural_consensus"
+            reasons.append("structural_consensus_override")
         else:
             mode = "partial"
             if conf < dynamic_min_confidence:
                 reasons.append("below_dynamic_confidence_threshold")
-            if ambiguity > max_manhattan_ambiguity_for_acceptance:
+            if effective_ambiguity > max_manhattan_ambiguity_for_acceptance:
                 reasons.append("high_manhattan_ambiguity")
+            if structural_strength < 0.60:
+                reasons.append("weak_structural_wall_evidence")
+            if structural_strength >= 0.60 and conf >= min_horizontal_confidence:
+                partial_axis_strategy = "analysis_projected"
+                partial_confidence_cap = 0.62
+            else:
+                partial_axis_strategy = "up_only"
+                partial_confidence_cap = 0.55
             if not reasons:
                 reasons.append("uncertain_horizontal_evidence")
 
@@ -1113,6 +1197,10 @@ def _decide_horizontal_strategy(
         "accepted_by": accepted_by,
         "dynamic_min_horizontal_confidence_for_acceptance": dynamic_min_confidence,
         "evidence_strength": evidence_strength,
+        "structural_strength": structural_strength,
+        "effective_manhattan_ambiguity": effective_ambiguity,
+        "partial_axis_strategy": partial_axis_strategy,
+        "partial_confidence_cap": float(partial_confidence_cap),
         "reasons": reasons,
     }
 
@@ -1125,12 +1213,19 @@ def _compute_reliability_v1_3(
     reliability_mode: str,
     up_guardrail_applied: bool,
     horizontal_decision_mode: str,
+    horizontal_evidence_strength: float = 0.0,
+    effective_manhattan_ambiguity: float | None = None,
+    partial_axis_strategy: str = "",
 ) -> tuple[float, dict[str, Any]]:
     up = _clamp01(up_confidence)
     horizontal = _clamp01(horizontal_confidence)
     ambiguity = _clamp01(manhattan_ambiguity)
+    effective_ambiguity = _clamp01(
+        effective_manhattan_ambiguity if effective_manhattan_ambiguity is not None else ambiguity
+    )
+    evidence_strength = _clamp01(horizontal_evidence_strength)
 
-    effective_horizontal = _clamp01(horizontal * (1.0 - (0.35 * ambiguity)))
+    effective_horizontal = _clamp01(horizontal * (1.0 - (0.30 * effective_ambiguity)))
     up_component = 0.65 * up
     horizontal_component = 0.35 * effective_horizontal
     base_score = up_component + horizontal_component
@@ -1143,10 +1238,13 @@ def _compute_reliability_v1_3(
         mode_bonus += 0.05
         reasons.append("full_calibration_bonus")
     elif reliability_mode == "safe_partial_calibration":
-        mode_bonus += 0.08 + (0.12 * up)
-        mode_penalty += 0.03 * ambiguity
+        mode_bonus += 0.06 + (0.10 * up) + (0.06 * evidence_strength)
+        mode_penalty += 0.02 * effective_ambiguity
         reasons.append("safe_partial_bonus")
-        if ambiguity > 0.0:
+        if partial_axis_strategy == "analysis_projected":
+            mode_bonus += 0.02
+            reasons.append("analysis_projected_partial_bonus")
+        if effective_ambiguity > 0.0:
             reasons.append("ambiguity_penalty")
     else:
         mode_penalty += 0.08
@@ -1173,6 +1271,9 @@ def _compute_reliability_v1_3(
         "up_confidence": up,
         "horizontal_confidence_raw": horizontal,
         "manhattan_ambiguity": ambiguity,
+        "effective_manhattan_ambiguity": effective_ambiguity,
+        "horizontal_evidence_strength": evidence_strength,
+        "partial_axis_strategy": partial_axis_strategy,
         "up_component": up_component,
         "horizontal_component_effective": horizontal_component,
         "horizontal_effective_confidence": effective_horizontal,
