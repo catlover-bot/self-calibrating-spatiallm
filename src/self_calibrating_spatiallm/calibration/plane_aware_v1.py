@@ -192,9 +192,11 @@ class PlaneAwareCalibratorV1(Calibrator):
                 ),
                 "evidence_strength": float(horizontal_decision.get("evidence_strength", 0.0)),
                 "structural_strength": float(horizontal_decision.get("structural_strength", 0.0)),
+                "structural_separation": float(horizontal_decision.get("structural_separation", 0.0)),
                 "effective_manhattan_ambiguity": float(
                     horizontal_decision.get("effective_manhattan_ambiguity", horizontal_ambiguity)
                 ),
+                "commitment_quality": float(horizontal_decision.get("commitment_quality", 0.0)),
                 "decision_mode": horizontal_decision.get("mode", "partial"),
                 "accepted_by": horizontal_decision.get("accepted_by"),
             }
@@ -296,6 +298,8 @@ class PlaneAwareCalibratorV1(Calibrator):
                 horizontal_decision.get("effective_manhattan_ambiguity", horizontal_ambiguity)
             ),
             partial_axis_strategy=str(horizontal_decision.get("partial_axis_strategy", "")),
+            accepted_by=str(horizontal_decision.get("accepted_by") or ""),
+            commitment_quality=float(horizontal_decision.get("commitment_quality", 0.0)),
         )
         confidence["overall_reliability"] = float(overall_reliability)
 
@@ -332,6 +336,8 @@ class PlaneAwareCalibratorV1(Calibrator):
                     horizontal_decision.get("effective_manhattan_ambiguity", horizontal_ambiguity)
                 ),
                 partial_axis_strategy=str(horizontal_decision.get("partial_axis_strategy", "")),
+                accepted_by=str(horizontal_decision.get("accepted_by") or ""),
+                commitment_quality=float(horizontal_decision.get("commitment_quality", 0.0)),
             )
             confidence["overall_reliability"] = float(overall_reliability)
         reliability_breakdown["normalization_requested"] = bool(self.normalize_scene)
@@ -1123,6 +1129,9 @@ def _decide_horizontal_strategy(
     separation = _clamp01(score_gap / max(primary_score, 1e-8))
     orientation_bonus = 0.05 if unique_orientation_count >= 2 else 0.0
     structural_strength = _clamp01((primary_score * 0.70) + (separation * 0.30) + orientation_bonus)
+    commitment_quality = _clamp01(
+        (conf * 0.55) + (structural_strength * 0.35) + ((1.0 - ambiguity) * 0.10)
+    )
 
     # Discount apparent ambiguity when strong structural wall evidence is available.
     effective_ambiguity = _clamp01(ambiguity - (0.25 * structural_strength))
@@ -1159,9 +1168,11 @@ def _decide_horizontal_strategy(
             and ambiguity <= max_manhattan_ambiguity_for_strong_acceptance
         )
         structural_accept = (
-            conf >= max(min_horizontal_confidence_for_acceptance - 0.05, min_horizontal_confidence)
-            and structural_strength >= 0.72
-            and effective_ambiguity <= (max_manhattan_ambiguity_for_acceptance + 0.05)
+            conf >= max(dynamic_min_confidence + 0.03, min_horizontal_confidence_for_acceptance)
+            and structural_strength >= 0.78
+            and separation >= 0.45
+            and commitment_quality >= 0.62
+            and effective_ambiguity <= max_manhattan_ambiguity_for_acceptance
         )
         if standard_accept:
             mode = "accept"
@@ -1183,9 +1194,16 @@ def _decide_horizontal_strategy(
                 reasons.append("high_manhattan_ambiguity")
             if structural_strength < 0.60:
                 reasons.append("weak_structural_wall_evidence")
-            if structural_strength >= 0.60 and conf >= min_horizontal_confidence:
+            if (
+                structural_strength >= 0.64
+                and separation >= 0.35
+                and conf >= max(min_horizontal_confidence_for_acceptance - 0.10, min_horizontal_confidence)
+            ):
                 partial_axis_strategy = "analysis_projected"
-                partial_confidence_cap = 0.62
+                partial_confidence_cap = float(
+                    _clamp01(0.56 + (0.06 * structural_strength) + (0.04 * separation))
+                )
+                reasons.append("conservative_structural_partial")
             else:
                 partial_axis_strategy = "up_only"
                 partial_confidence_cap = 0.55
@@ -1198,7 +1216,9 @@ def _decide_horizontal_strategy(
         "dynamic_min_horizontal_confidence_for_acceptance": dynamic_min_confidence,
         "evidence_strength": evidence_strength,
         "structural_strength": structural_strength,
+        "structural_separation": separation,
         "effective_manhattan_ambiguity": effective_ambiguity,
+        "commitment_quality": commitment_quality,
         "partial_axis_strategy": partial_axis_strategy,
         "partial_confidence_cap": float(partial_confidence_cap),
         "reasons": reasons,
@@ -1216,6 +1236,8 @@ def _compute_reliability_v1_3(
     horizontal_evidence_strength: float = 0.0,
     effective_manhattan_ambiguity: float | None = None,
     partial_axis_strategy: str = "",
+    accepted_by: str = "",
+    commitment_quality: float = 0.0,
 ) -> tuple[float, dict[str, Any]]:
     up = _clamp01(up_confidence)
     horizontal = _clamp01(horizontal_confidence)
@@ -1224,6 +1246,7 @@ def _compute_reliability_v1_3(
         effective_manhattan_ambiguity if effective_manhattan_ambiguity is not None else ambiguity
     )
     evidence_strength = _clamp01(horizontal_evidence_strength)
+    commit_quality = _clamp01(commitment_quality)
 
     effective_horizontal = _clamp01(horizontal * (1.0 - (0.30 * effective_ambiguity)))
     up_component = 0.65 * up
@@ -1235,14 +1258,24 @@ def _compute_reliability_v1_3(
     reasons: list[str] = []
 
     if reliability_mode == "full_calibration":
-        mode_bonus += 0.05
+        mode_bonus += 0.04 + (0.08 * commit_quality)
         reasons.append("full_calibration_bonus")
+        if accepted_by == "structural_consensus":
+            if commit_quality >= 0.70:
+                mode_bonus += 0.01
+                reasons.append("high_quality_structural_consensus_bonus")
+            else:
+                mode_penalty += 0.05
+                reasons.append("low_quality_structural_consensus_penalty")
+        if effective_ambiguity > 0.80 and commit_quality < 0.60:
+            mode_penalty += 0.03
+            reasons.append("high_ambiguity_full_commit_penalty")
     elif reliability_mode == "safe_partial_calibration":
-        mode_bonus += 0.06 + (0.10 * up) + (0.06 * evidence_strength)
-        mode_penalty += 0.02 * effective_ambiguity
+        mode_bonus += 0.06 + (0.08 * up) + (0.06 * evidence_strength) + (0.02 * commit_quality)
+        mode_penalty += 0.015 * effective_ambiguity
         reasons.append("safe_partial_bonus")
         if partial_axis_strategy == "analysis_projected":
-            mode_bonus += 0.02
+            mode_bonus += 0.015
             reasons.append("analysis_projected_partial_bonus")
         if effective_ambiguity > 0.0:
             reasons.append("ambiguity_penalty")
@@ -1273,6 +1306,8 @@ def _compute_reliability_v1_3(
         "manhattan_ambiguity": ambiguity,
         "effective_manhattan_ambiguity": effective_ambiguity,
         "horizontal_evidence_strength": evidence_strength,
+        "accepted_by": accepted_by,
+        "commitment_quality": commit_quality,
         "partial_axis_strategy": partial_axis_strategy,
         "up_component": up_component,
         "horizontal_component_effective": horizontal_component,

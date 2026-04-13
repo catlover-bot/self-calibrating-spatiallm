@@ -137,7 +137,7 @@ def test_horizontal_decision_dynamic_thresholding() -> None:
 
 def test_horizontal_decision_structural_consensus_override() -> None:
     decision = _decide_horizontal_strategy(
-        horizontal_confidence=0.33,
+        horizontal_confidence=0.40,
         horizontal_ambiguity=0.90,
         min_horizontal_confidence=0.15,
         min_horizontal_confidence_for_acceptance=0.35,
@@ -151,6 +151,25 @@ def test_horizontal_decision_structural_consensus_override() -> None:
     assert decision["mode"] == "accept"
     assert decision["accepted_by"] == "structural_consensus"
     assert float(decision["structural_strength"]) > 0.70
+
+
+def test_horizontal_decision_rejects_low_quality_structural_consensus() -> None:
+    decision = _decide_horizontal_strategy(
+        horizontal_confidence=0.34,
+        horizontal_ambiguity=0.92,
+        min_horizontal_confidence=0.15,
+        min_horizontal_confidence_for_acceptance=0.35,
+        max_manhattan_ambiguity_for_acceptance=0.85,
+        strong_horizontal_confidence_for_ambiguous_acceptance=0.70,
+        max_manhattan_ambiguity_for_strong_acceptance=0.95,
+        primary_wall_score=0.90,
+        secondary_wall_score=0.20,
+        unique_orientation_count=2,
+    )
+    assert decision["mode"] == "partial"
+    assert decision["accepted_by"] is None
+    assert "conservative_structural_partial" in decision["reasons"]
+    assert decision["partial_axis_strategy"] == "analysis_projected"
 
 
 def test_reliability_scoring_distinguishes_modes() -> None:
@@ -209,6 +228,36 @@ def test_reliability_rewards_analysis_projected_partial_strategy() -> None:
     )
     assert rel_analysis > rel_up_only
     assert "analysis_projected_partial_bonus" in breakdown["reasons"]
+
+
+def test_reliability_penalizes_low_quality_structural_consensus_full_commit() -> None:
+    low_quality, low_breakdown = _compute_reliability_v1_3(
+        up_confidence=0.74,
+        horizontal_confidence=0.40,
+        manhattan_ambiguity=0.92,
+        reliability_mode="full_calibration",
+        up_guardrail_applied=False,
+        horizontal_decision_mode="accept",
+        horizontal_evidence_strength=0.55,
+        effective_manhattan_ambiguity=0.82,
+        accepted_by="structural_consensus",
+        commitment_quality=0.56,
+    )
+    high_quality, high_breakdown = _compute_reliability_v1_3(
+        up_confidence=0.74,
+        horizontal_confidence=0.55,
+        manhattan_ambiguity=0.70,
+        reliability_mode="full_calibration",
+        up_guardrail_applied=False,
+        horizontal_decision_mode="accept",
+        horizontal_evidence_strength=0.72,
+        effective_manhattan_ambiguity=0.62,
+        accepted_by="structural_consensus",
+        commitment_quality=0.74,
+    )
+    assert high_quality > low_quality
+    assert "low_quality_structural_consensus_penalty" in low_breakdown["reasons"]
+    assert "high_quality_structural_consensus_bonus" in high_breakdown["reasons"]
 
 
 def test_plane_role_assignment_and_ranking_diagnostics_present() -> None:
