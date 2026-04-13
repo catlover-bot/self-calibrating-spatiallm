@@ -115,6 +115,7 @@ def run_evaluation_pack(
             annotation_path=annotation_path,
             entry=entry,
         )
+        _persist_scene_setting_artifacts(scene_result=scene_result, output_dir=output_dir)
         scenes.append(scene_result)
         for setting in scene_result.settings:
             flattened_results.append(
@@ -766,6 +767,145 @@ def _summarize_generator_execution(execution_info: Any) -> dict[str, Any]:
         summary["invoked_command"] = [str(token) for token in execution_info["invoked_command"]]
 
     return summary
+
+
+def _persist_scene_setting_artifacts(*, scene_result: SceneEvaluation, output_dir: Path) -> None:
+    scene_root = output_dir / "scene_setting_artifacts" / _safe_component(scene_result.scene_id)
+
+    for setting in scene_result.settings:
+        metadata = setting.metadata if isinstance(setting.metadata, dict) else {}
+        if not isinstance(metadata, dict):
+            continue
+        setting_root = scene_root / _safe_component(setting.setting_name)
+        setting_root.mkdir(parents=True, exist_ok=True)
+
+        artifact_keys = [
+            "structured_prediction_pre_repair",
+            "structured_prediction_post_repair",
+            "language_export_pre_repair",
+            "language_export_post_repair",
+            "prediction_summary_pre_repair",
+        ]
+        artifact_paths: dict[str, str] = {}
+        for key in artifact_keys:
+            value = metadata.get(key)
+            if not isinstance(value, dict):
+                continue
+            path = setting_root / f"{key}.json"
+            path.write_text(json.dumps(value, indent=2, sort_keys=True), encoding="utf-8")
+            artifact_paths[key] = str(path.relative_to(output_dir))
+
+        existing_paths = metadata.get("prediction_artifact_paths", {})
+        if isinstance(existing_paths, dict):
+            for key, value in existing_paths.items():
+                if isinstance(key, str) and isinstance(value, str):
+                    artifact_paths.setdefault(key, value)
+
+        metadata["prediction_artifact_paths"] = artifact_paths
+        metadata["prediction_source_contract"] = _build_prediction_source_contract(
+            metadata=metadata,
+            artifact_paths=artifact_paths,
+        )
+        metadata["prediction_source_contract_version"] = "v1"
+        setting.metadata = metadata
+
+
+def _build_prediction_source_contract(
+    *,
+    metadata: dict[str, Any],
+    artifact_paths: dict[str, str],
+) -> dict[str, Any]:
+    explicit_present = _structured_prediction_has_explicit_relations(
+        metadata.get("structured_prediction_pre_repair")
+    )
+
+    hint_only_present = _structured_prediction_hint_only(metadata.get("structured_prediction_pre_repair"))
+
+    summary_present = isinstance(metadata.get("prediction_summary_pre_repair"), dict)
+    if not summary_present:
+        summary_present = _has_artifact_path(artifact_paths, "prediction_summary_pre_repair")
+
+    return {
+        "explicit_structured_prediction": {
+            "available": bool(explicit_present),
+            "inline_key": "structured_prediction_pre_repair"
+            if isinstance(metadata.get("structured_prediction_pre_repair"), dict)
+            else None,
+            "artifact_key": "structured_prediction_pre_repair"
+            if _has_artifact_path(artifact_paths, "structured_prediction_pre_repair")
+            else None,
+            "relation_count": _relation_count_from_payload(metadata.get("structured_prediction_pre_repair")),
+        },
+        "structured_prediction_with_hint_only": {
+            "available": bool(hint_only_present),
+            "inline_key": "structured_prediction_pre_repair"
+            if isinstance(metadata.get("structured_prediction_pre_repair"), dict)
+            else None,
+            "artifact_key": "structured_prediction_pre_repair"
+            if _has_artifact_path(artifact_paths, "structured_prediction_pre_repair")
+            else None,
+        },
+        "summary_reconstructed": {
+            "available": bool(summary_present),
+            "inline_key": "prediction_summary_pre_repair"
+            if isinstance(metadata.get("prediction_summary_pre_repair"), dict)
+            else None,
+            "artifact_key": "prediction_summary_pre_repair"
+            if _has_artifact_path(artifact_paths, "prediction_summary_pre_repair")
+            else None,
+        },
+        "source_precedence": [
+            "explicit_structured_prediction",
+            "structured_prediction_with_hint_only",
+            "summary_reconstructed",
+        ],
+    }
+
+
+def _structured_prediction_has_explicit_relations(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    relations = payload.get("relations")
+    return isinstance(relations, list) and len(relations) > 0
+
+
+def _structured_prediction_hint_only(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    relations = payload.get("relations")
+    metadata = payload.get("metadata")
+    relation_count = len(relations) if isinstance(relations, list) else 0
+    if relation_count > 0:
+        return False
+    if not isinstance(metadata, dict):
+        return False
+    hints = metadata.get("relation_predicates")
+    hint_count = metadata.get("relation_count_hint")
+    has_predicates = isinstance(hints, list) and len(hints) > 0
+    try:
+        parsed_hint_count = int(hint_count) if hint_count is not None else 0
+    except Exception:
+        parsed_hint_count = 0
+    return has_predicates or parsed_hint_count > 0
+
+
+def _relation_count_from_payload(payload: Any) -> int:
+    if not isinstance(payload, dict):
+        return 0
+    relations = payload.get("relations")
+    if isinstance(relations, list):
+        return len(relations)
+    return 0
+
+
+def _has_artifact_path(paths: dict[str, str], key: str) -> bool:
+    value = paths.get(key)
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _safe_component(value: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(value))
+    return cleaned or "unknown"
 
 
 def _aggregate_by_setting(

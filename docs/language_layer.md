@@ -18,6 +18,12 @@ Source selection is explicit and inspectable:
 2. `structured_prediction_with_hint_only`
 3. `summary_reconstructed`
 
+The language builder now reads this contract from evaluation metadata:
+
+- `prediction_source_contract`
+- `prediction_artifact_paths`
+- `prediction_source_contract_version`
+
 ## Why This Matters
 
 The core question remains:
@@ -52,6 +58,7 @@ With this layer, that question can be analyzed through language-facing outputs:
   - supports aligned per-scene comparison across settings
   - exports pairwise setting-difference summaries and deterministic comparison QA
   - attempts relation/object recovery from upstream metadata artifacts before summary fallback
+  - loads structured prediction artifacts via `prediction_artifact_paths` when inline payloads are absent
 
 - `scripts/export_scene_prediction_language.py`
   - exports one `ScenePrediction` artifact into language-facing forms

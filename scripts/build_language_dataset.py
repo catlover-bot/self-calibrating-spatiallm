@@ -95,6 +95,7 @@ def main() -> int:
                 setting_name=setting_name,
                 setting_metadata=metadata,
                 prediction_summary=metadata.get("prediction_summary_pre_repair"),
+                report_dir=report_path.parent,
             )
             prediction = _enrich_prediction_with_summary_hints(
                 prediction=prediction,
@@ -267,33 +268,52 @@ def _resolve_prediction_with_provenance(
     setting_name: str,
     setting_metadata: dict[str, Any],
     prediction_summary: Any,
+    report_dir: Path | None,
 ) -> tuple[ScenePrediction, dict[str, Any]]:
     trace: list[str] = []
 
-    for key, payload in _candidate_prediction_payloads(setting_metadata):
-        if isinstance(payload, dict):
-            try:
-                prediction = ScenePrediction.from_dict(payload)
-                prediction = _normalize_prediction(prediction, fallback_scene_id=scene_id)
-                source_class = _classify_source_class(prediction)
-                prediction_metadata = (
-                    dict(prediction.metadata) if isinstance(prediction.metadata, dict) else {}
-                )
-                prediction_metadata.setdefault("prediction_source_class", source_class)
-                prediction_metadata.setdefault("prediction_source_selected_from", key)
-                prediction.metadata = prediction_metadata
-                trace.append(f"{key}:parsed")
-                return prediction, {
-                    "selected_from": key,
-                    "source_class": source_class,
-                    "evidence_level": _relation_evidence_level(prediction),
-                    "has_structured_prediction": True,
-                    "trace": trace,
-                }
-            except Exception as error:
-                trace.append(f"{key}:parse_failed:{type(error).__name__}")
-        elif payload is not None:
-            trace.append(f"{key}:not_object")
+    parsed_candidates: list[dict[str, Any]] = []
+    for candidate in _candidate_prediction_payloads(setting_metadata, report_dir=report_dir):
+        source_name = str(candidate.get("source", "unknown"))
+        payload = candidate.get("payload")
+        if not isinstance(payload, dict):
+            if payload is not None:
+                trace.append(f"{source_name}:not_object")
+            continue
+
+        parsed = _parse_prediction_payload_variants(
+            payload=payload,
+            scene_id=scene_id,
+            setting_name=setting_name,
+            source_name=source_name,
+            source_priority=int(candidate.get("priority", _prediction_source_priority(source_name))),
+            trace=trace,
+        )
+        if parsed is not None:
+            parsed_candidates.append(parsed)
+
+    if parsed_candidates:
+        best = sorted(
+            parsed_candidates,
+            key=lambda item: (
+                -int(item["rank"]),
+                int(item["priority"]),
+            ),
+        )[0]
+        prediction = best["prediction"]
+        source_class = str(best["source_class"])
+        source_name = str(best["source_name"])
+        prediction_metadata = dict(prediction.metadata) if isinstance(prediction.metadata, dict) else {}
+        prediction_metadata.setdefault("prediction_source_class", source_class)
+        prediction_metadata.setdefault("prediction_source_selected_from", source_name)
+        prediction.metadata = prediction_metadata
+        return prediction, {
+            "selected_from": source_name,
+            "source_class": source_class,
+            "evidence_level": _relation_evidence_level(prediction),
+            "has_structured_prediction": True,
+            "trace": trace,
+        }
 
     recovered_prediction = _recover_prediction_from_metadata_artifacts(
         scene_id=scene_id,
@@ -328,7 +348,11 @@ def _resolve_prediction_with_provenance(
     }
 
 
-def _candidate_prediction_payloads(setting_metadata: dict[str, Any]) -> list[tuple[str, Any]]:
+def _candidate_prediction_payloads(
+    setting_metadata: dict[str, Any],
+    *,
+    report_dir: Path | None,
+) -> list[dict[str, Any]]:
     keys = [
         "structured_prediction_pre_repair",
         "structured_prediction",
@@ -337,7 +361,221 @@ def _candidate_prediction_payloads(setting_metadata: dict[str, Any]) -> list[tup
         "structured_prediction_post_repair",
         "scene_prediction_post_repair",
     ]
-    return [(key, setting_metadata.get(key)) for key in keys]
+    candidates: list[dict[str, Any]] = []
+    seen_sources: set[str] = set()
+
+    contract = setting_metadata.get("prediction_source_contract")
+    if isinstance(contract, dict):
+        precedence = contract.get("source_precedence", [])
+        if isinstance(precedence, list):
+            priority_index = 0
+            for class_name in precedence:
+                entry = contract.get(str(class_name))
+                if not isinstance(entry, dict):
+                    continue
+                inline_key = entry.get("inline_key")
+                if isinstance(inline_key, str) and inline_key in keys and inline_key not in seen_sources:
+                    candidates.append(
+                        {
+                            "source": inline_key,
+                            "payload": setting_metadata.get(inline_key),
+                            "priority": priority_index,
+                        }
+                    )
+                    seen_sources.add(inline_key)
+                    priority_index += 1
+
+                artifact_key = entry.get("artifact_key")
+                source_name = f"artifact:{artifact_key}" if isinstance(artifact_key, str) else None
+                if source_name and source_name not in seen_sources:
+                    artifact_payload = _load_single_prediction_artifact_payload(
+                        setting_metadata,
+                        report_dir=report_dir,
+                        artifact_key=artifact_key,
+                    )
+                    candidates.append(
+                        {
+                            "source": source_name,
+                            "payload": artifact_payload,
+                            "priority": priority_index,
+                        }
+                    )
+                    seen_sources.add(source_name)
+                    priority_index += 1
+
+    for index, key in enumerate(keys):
+        if key in seen_sources:
+            continue
+        candidates.append(
+            {
+                "source": key,
+                "payload": setting_metadata.get(key),
+                "priority": index,
+            }
+        )
+        seen_sources.add(key)
+
+    for index, artifact in enumerate(_load_prediction_artifact_payloads(setting_metadata, report_dir=report_dir)):
+        if str(artifact["source"]) in seen_sources:
+            continue
+        candidates.append(
+            {
+                "source": artifact["source"],
+                "payload": artifact["payload"],
+                "priority": len(keys) + index,
+            }
+        )
+        seen_sources.add(str(artifact["source"]))
+    return candidates
+
+
+def _load_prediction_artifact_payloads(
+    setting_metadata: dict[str, Any],
+    *,
+    report_dir: Path | None,
+) -> list[dict[str, Any]]:
+    if report_dir is None:
+        return []
+
+    artifact_paths = setting_metadata.get("prediction_artifact_paths")
+    if not isinstance(artifact_paths, dict):
+        return []
+
+    keys = [
+        "structured_prediction_pre_repair",
+        "structured_prediction",
+        "scene_prediction_pre_repair",
+        "scene_prediction",
+        "structured_prediction_post_repair",
+        "scene_prediction_post_repair",
+    ]
+    results: list[dict[str, Any]] = []
+    for key in keys:
+        rel = artifact_paths.get(key)
+        if not isinstance(rel, str) or not rel.strip():
+            continue
+        path = (report_dir / rel).resolve() if not Path(rel).is_absolute() else Path(rel)
+        if not path.exists():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        results.append(
+            {
+                "source": f"artifact:{key}",
+                "payload": payload,
+                "path": str(path),
+            }
+        )
+    return results
+
+
+def _load_single_prediction_artifact_payload(
+    setting_metadata: dict[str, Any],
+    *,
+    report_dir: Path | None,
+    artifact_key: str,
+) -> dict[str, Any] | None:
+    if report_dir is None:
+        return None
+    artifact_paths = setting_metadata.get("prediction_artifact_paths")
+    if not isinstance(artifact_paths, dict):
+        return None
+    rel = artifact_paths.get(artifact_key)
+    if not isinstance(rel, str) or not rel.strip():
+        return None
+    path = (report_dir / rel).resolve() if not Path(rel).is_absolute() else Path(rel)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _parse_prediction_payload_variants(
+    *,
+    payload: dict[str, Any],
+    scene_id: str,
+    setting_name: str,
+    source_name: str,
+    source_priority: int,
+    trace: list[str],
+) -> dict[str, Any] | None:
+    variants = _prediction_payload_variants(payload)
+    for variant_name, variant_payload in variants:
+        if not isinstance(variant_payload, dict):
+            continue
+        normalized_payload = dict(variant_payload)
+        normalized_payload.setdefault("sample_id", scene_id)
+        normalized_payload.setdefault("generator_name", f"{setting_name}_from_{source_name}")
+        try:
+            prediction = ScenePrediction.from_dict(normalized_payload)
+            prediction = _normalize_prediction(prediction, fallback_scene_id=scene_id)
+        except Exception as error:
+            trace.append(f"{source_name}:{variant_name}:parse_failed:{type(error).__name__}")
+            continue
+
+        source_class = _classify_source_class(prediction)
+        rank = _source_class_rank(source_class)
+        trace.append(f"{source_name}:{variant_name}:parsed:{source_class}")
+        return {
+            "prediction": prediction,
+            "source_name": source_name,
+            "source_class": source_class,
+            "rank": rank,
+            "priority": source_priority,
+        }
+    trace.append(f"{source_name}:no_valid_variant")
+    return None
+
+
+def _prediction_payload_variants(payload: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    variants: list[tuple[str, dict[str, Any]]] = []
+    if isinstance(payload.get("scene_prediction"), dict):
+        variants.append(("scene_prediction", dict(payload["scene_prediction"])))
+    if isinstance(payload.get("prediction"), dict):
+        variants.append(("prediction", dict(payload["prediction"])))
+    if isinstance(payload.get("data"), dict):
+        variants.append(("data", dict(payload["data"])))
+    variants.append(("payload", dict(payload)))
+    return variants
+
+
+def _source_class_rank(source_class: str) -> int:
+    order = {
+        "explicit_structured_prediction": 3,
+        "structured_prediction_with_hint_only": 2,
+        "summary_reconstructed": 1,
+    }
+    return order.get(source_class, 0)
+
+
+def _prediction_source_priority(source_name: str) -> int:
+    priority_order = [
+        "structured_prediction_pre_repair",
+        "artifact:structured_prediction_pre_repair",
+        "structured_prediction",
+        "artifact:structured_prediction",
+        "scene_prediction_pre_repair",
+        "artifact:scene_prediction_pre_repair",
+        "scene_prediction",
+        "artifact:scene_prediction",
+        "structured_prediction_post_repair",
+        "artifact:structured_prediction_post_repair",
+        "scene_prediction_post_repair",
+        "artifact:scene_prediction_post_repair",
+    ]
+    try:
+        return priority_order.index(source_name)
+    except ValueError:
+        return len(priority_order) + 1
 
 
 def _recover_prediction_from_metadata_artifacts(
@@ -727,6 +965,7 @@ def _base_recovered_metadata(
         "relation_count_hint": relation_count,
         "relation_predicates": relation_predicates,
         "prediction_source_class": "explicit_structured_prediction" if relation_count > 0 else "structured_prediction_with_hint_only",
+        "prediction_source_selected_from": source_key,
     }
     if isinstance(prediction_summary, dict):
         object_count = _safe_int(prediction_summary.get("object_count"))

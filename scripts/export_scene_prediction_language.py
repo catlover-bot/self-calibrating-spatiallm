@@ -66,6 +66,9 @@ def main() -> int:
             "reconstructed_from_prediction_summary": language_export.get(
                 "reconstructed_from_prediction_summary"
             ),
+            "prediction_source_selected_from": prediction.metadata.get("prediction_source_selected_from")
+            if isinstance(prediction.metadata, dict)
+            else None,
         },
     }
 

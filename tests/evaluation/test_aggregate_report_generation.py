@@ -110,11 +110,25 @@ def test_aggregate_report_generation(tmp_path: Path) -> None:
     v1_setting = next(item for item in scene_settings if item["setting_name"] == "calibration_v1")
     metadata = v1_setting.get("metadata", {})
     assert "prediction_summary_pre_repair" in metadata
+    assert "structured_prediction_pre_repair" in metadata
+    assert "structured_prediction_post_repair" in metadata
     assert "calibrated_input_summary" in metadata
     assert "propagation_diagnostics" in metadata
+    assert "prediction_artifact_paths" in metadata
+    assert "prediction_source_contract" in metadata
+    assert "prediction_source_contract_version" in metadata
     assert isinstance(metadata["prediction_summary_pre_repair"], dict)
+    assert isinstance(metadata["structured_prediction_pre_repair"], dict)
+    assert isinstance(metadata["structured_prediction_post_repair"], dict)
     assert isinstance(metadata["calibrated_input_summary"], dict)
     assert isinstance(metadata["propagation_diagnostics"], dict)
+    assert isinstance(metadata["prediction_artifact_paths"], dict)
+    assert isinstance(metadata["prediction_source_contract"], dict)
+    assert metadata["prediction_source_contract_version"] == "v1"
+    assert "structured_prediction_pre_repair" in metadata["prediction_artifact_paths"]
+    rel_prediction_path = metadata["prediction_artifact_paths"]["structured_prediction_pre_repair"]
+    prediction_artifact_path = outputs["evaluation_report_json"].parent / rel_prediction_path
+    assert prediction_artifact_path.exists()
 
     scene_delta = report_payload["scene_level_delta_report"][0]
     assert "prediction_delta_v1_minus_v0" in scene_delta
