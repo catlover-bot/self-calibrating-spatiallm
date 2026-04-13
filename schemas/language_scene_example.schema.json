@@ -24,6 +24,16 @@
     "scene_summary_text": {"type": "string"},
     "object_list_text": {"type": "string"},
     "relation_text": {"type": "string"},
+    "relation_statements": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "relation_evidence_level": {"type": "string"},
+    "relation_hint_count": {"type": "integer"},
+    "relation_hint_predicates": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
     "scene_paragraph_text": {"type": "string"},
     "qa_examples": {
       "type": "array",
@@ -37,4 +47,3 @@
   },
   "additionalProperties": false
 }
-

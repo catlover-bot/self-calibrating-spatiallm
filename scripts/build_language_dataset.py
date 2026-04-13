@@ -102,16 +102,20 @@ def main() -> int:
                 prediction_payload=prediction_payload,
                 prediction_summary=metadata.get("prediction_summary_pre_repair"),
             )
+            prediction = _enrich_prediction_with_summary_hints(
+                prediction=prediction,
+                prediction_summary=metadata.get("prediction_summary_pre_repair"),
+            )
 
-            language_export = metadata.get("language_export_pre_repair")
-            if not isinstance(language_export, dict):
-                language_export = export_scene_prediction_to_language(prediction)
-                language_export_source = "computed_from_prediction"
-            else:
-                language_export_source = "metadata.language_export_pre_repair"
+            # Always recompute to ensure relation hints and reconstruction flags are faithfully reflected.
+            language_export = export_scene_prediction_to_language(prediction)
+            language_export_source = "computed_from_prediction"
 
             qa_examples = build_qa_examples(prediction)
             grounding_examples = build_grounding_examples(prediction)
+            reconstructed_from_summary = bool(
+                language_export.get("reconstructed_from_prediction_summary", False)
+            )
 
             scene_setting_row = {
                 "scene_id": scene_id,
@@ -123,6 +127,10 @@ def main() -> int:
                 "object_list_text": language_export.get("object_list_text"),
                 "relation_text": language_export.get("relation_text"),
                 "scene_paragraph_text": language_export.get("scene_paragraph_text"),
+                "relation_statements": language_export.get("relation_statements", []),
+                "relation_evidence_level": language_export.get("relation_evidence_level"),
+                "relation_hint_count": language_export.get("relation_hint_count"),
+                "relation_hint_predicates": language_export.get("relation_hint_predicates", []),
                 "qa_examples": qa_examples,
                 "grounding_examples": grounding_examples,
                 "metadata": {
@@ -133,6 +141,8 @@ def main() -> int:
                     "calibration_method": metadata.get("calibration_method"),
                     "calibration_execution": metadata.get("calibration_execution"),
                     "prediction_summary_pre_repair": metadata.get("prediction_summary_pre_repair"),
+                    "reconstructed_from_prediction_summary": reconstructed_from_summary,
+                    "object_geometry_mode": language_export.get("object_geometry_mode"),
                 },
             }
             scene_setting_rows.append(scene_setting_row)
@@ -170,6 +180,12 @@ def main() -> int:
                 "relation_count": language_export.get("relation_count"),
                 "object_labels": language_export.get("object_labels", []),
                 "relation_predicates": language_export.get("relation_predicates", []),
+                "relation_hint_predicates": language_export.get("relation_hint_predicates", []),
+                "relation_hint_count": language_export.get("relation_hint_count"),
+                "relation_evidence_level": language_export.get("relation_evidence_level"),
+                "reconstructed_from_prediction_summary": reconstructed_from_summary,
+                "calibration_method": metadata.get("calibration_method"),
+                "generator_mode": metadata.get("generator_mode"),
             }
 
             counts = setting_export_counts.setdefault(
@@ -178,6 +194,7 @@ def main() -> int:
                     "num_success": 0,
                     "num_with_structured_prediction": 0,
                     "num_with_language_export": 0,
+                    "num_reconstructed_from_summary": 0,
                 },
             )
             counts["num_success"] += 1
@@ -185,6 +202,8 @@ def main() -> int:
                 counts["num_with_structured_prediction"] += 1
             if isinstance(language_export, dict):
                 counts["num_with_language_export"] += 1
+            if reconstructed_from_summary:
+                counts["num_reconstructed_from_summary"] += 1
 
     alignment_rows = _build_alignment_rows(alignment_map)
     summary = _build_summary(
@@ -266,7 +285,10 @@ def _resolve_prediction(
                 position=Point3D(0.0, 0.0, 0.0),
                 size=Point3D(1.0, 1.0, 1.0),
                 confidence=0.5,
-                attributes={"reconstructed_from_prediction_summary": True},
+                attributes={
+                    "reconstructed_from_prediction_summary": True,
+                    "geometry_unavailable": True,
+                },
             )
         )
 
@@ -285,10 +307,56 @@ def _resolve_prediction(
     )
 
 
+def _enrich_prediction_with_summary_hints(
+    *,
+    prediction: ScenePrediction,
+    prediction_summary: Any,
+) -> ScenePrediction:
+    metadata = dict(prediction.metadata) if isinstance(prediction.metadata, dict) else {}
+
+    summary_object_count = None
+    summary_relation_count = None
+    summary_relation_predicates: list[str] = []
+    if isinstance(prediction_summary, dict):
+        summary_object_count = _safe_int(prediction_summary.get("object_count"))
+        summary_relation_count = _safe_int(prediction_summary.get("relation_count"))
+        predicates = prediction_summary.get("relation_predicates", [])
+        if isinstance(predicates, list):
+            summary_relation_predicates = sorted(
+                {str(item).strip() for item in predicates if str(item).strip()}
+            )
+
+    if "relation_count_hint" not in metadata and summary_relation_count is not None:
+        metadata["relation_count_hint"] = summary_relation_count
+    if "relation_predicates" not in metadata and summary_relation_predicates:
+        metadata["relation_predicates"] = summary_relation_predicates
+    if "object_count_hint" not in metadata and summary_object_count is not None:
+        metadata["object_count_hint"] = summary_object_count
+
+    prediction.metadata = metadata
+    return prediction
+
+
 def _build_alignment_rows(alignment_map: dict[str, dict[str, dict[str, Any]]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for scene_id in sorted(alignment_map.keys()):
         by_setting = alignment_map[scene_id]
+        v0_v1_diff = _build_pairwise_comparison(by_setting, "calibration_v0", "calibration_v1")
+        v1_repair_diff = _build_pairwise_comparison(
+            by_setting,
+            "calibration_v1",
+            "calibration_v1_plus_repair",
+        )
+        mock_external_diff = _build_pairwise_comparison(
+            by_setting,
+            "mock_generator",
+            "external_generator",
+        )
+        comparison_examples = _build_alignment_comparison_examples(
+            scene_id=scene_id,
+            v0_v1_diff=v0_v1_diff,
+            mock_external_diff=mock_external_diff,
+        )
         row = {
             "scene_id": scene_id,
             "settings": by_setting,
@@ -300,9 +368,117 @@ def _build_alignment_rows(alignment_map: dict[str, dict[str, dict[str, Any]]]) -
             "has_mock_external_alignment": all(
                 name in by_setting for name in ["mock_generator", "external_generator"]
             ),
+            "pairwise_differences": {
+                "calibration_v0_vs_calibration_v1": v0_v1_diff,
+                "calibration_v1_vs_calibration_v1_plus_repair": v1_repair_diff,
+                "mock_generator_vs_external_generator": mock_external_diff,
+            },
+            "comparison_examples": comparison_examples,
         }
         rows.append(row)
     return rows
+
+
+def _build_pairwise_comparison(
+    by_setting: dict[str, dict[str, Any]],
+    base_setting: str,
+    target_setting: str,
+) -> dict[str, Any] | None:
+    base = by_setting.get(base_setting)
+    target = by_setting.get(target_setting)
+    if not isinstance(base, dict) or not isinstance(target, dict):
+        return None
+
+    base_labels = _to_str_set(base.get("object_labels"))
+    target_labels = _to_str_set(target.get("object_labels"))
+    base_predicates = _to_str_set(base.get("relation_predicates"))
+    target_predicates = _to_str_set(target.get("relation_predicates"))
+    base_hint_predicates = _to_str_set(base.get("relation_hint_predicates"))
+    target_hint_predicates = _to_str_set(target.get("relation_hint_predicates"))
+
+    return {
+        "base_setting": base_setting,
+        "target_setting": target_setting,
+        "object_count_delta": _safe_int(target.get("object_count"), 0)
+        - _safe_int(base.get("object_count"), 0),
+        "relation_count_delta": _safe_int(target.get("relation_count"), 0)
+        - _safe_int(base.get("relation_count"), 0),
+        "object_labels_added": sorted(target_labels - base_labels),
+        "object_labels_removed": sorted(base_labels - target_labels),
+        "relation_predicates_added": sorted(target_predicates - base_predicates),
+        "relation_predicates_removed": sorted(base_predicates - target_predicates),
+        "relation_hint_predicates_added": sorted(target_hint_predicates - base_hint_predicates),
+        "relation_hint_predicates_removed": sorted(base_hint_predicates - target_hint_predicates),
+        "base_relation_evidence_level": str(base.get("relation_evidence_level", "unknown")),
+        "target_relation_evidence_level": str(target.get("relation_evidence_level", "unknown")),
+        "base_reconstructed_from_summary": bool(base.get("reconstructed_from_prediction_summary", False)),
+        "target_reconstructed_from_summary": bool(target.get("reconstructed_from_prediction_summary", False)),
+    }
+
+
+def _build_alignment_comparison_examples(
+    *,
+    scene_id: str,
+    v0_v1_diff: dict[str, Any] | None,
+    mock_external_diff: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if isinstance(v0_v1_diff, dict):
+        rows.append(
+            {
+                "scene_id": scene_id,
+                "task_type": "setting_delta_qa",
+                "question": "How does calibration_v1 differ from calibration_v0 for this scene?",
+                "answer": _render_pairwise_delta_answer(v0_v1_diff),
+                "metadata": v0_v1_diff,
+            }
+        )
+
+    if isinstance(mock_external_diff, dict):
+        labels_added = mock_external_diff.get("object_labels_added", [])
+        if not isinstance(labels_added, list):
+            labels_added = []
+        rows.append(
+            {
+                "scene_id": scene_id,
+                "task_type": "setting_delta_qa",
+                "question": "Which labels appear in external_generator but not mock_generator?",
+                "answer": ", ".join(labels_added) if labels_added else "none",
+                "metadata": {
+                    "base_setting": "mock_generator",
+                    "target_setting": "external_generator",
+                    "object_labels_added": labels_added,
+                },
+            }
+        )
+    return rows
+
+
+def _render_pairwise_delta_answer(diff: dict[str, Any]) -> str:
+    labels_added = diff.get("object_labels_added", [])
+    labels_removed = diff.get("object_labels_removed", [])
+    predicates_added = diff.get("relation_predicates_added", [])
+    predicates_removed = diff.get("relation_predicates_removed", [])
+
+    if not isinstance(labels_added, list):
+        labels_added = []
+    if not isinstance(labels_removed, list):
+        labels_removed = []
+    if not isinstance(predicates_added, list):
+        predicates_added = []
+    if not isinstance(predicates_removed, list):
+        predicates_removed = []
+
+    parts = [
+        f"object_count_delta={diff.get('object_count_delta', 0)}",
+        f"relation_count_delta={diff.get('relation_count_delta', 0)}",
+        f"labels_added={','.join(labels_added) if labels_added else 'none'}",
+        f"labels_removed={','.join(labels_removed) if labels_removed else 'none'}",
+        f"predicates_added={','.join(predicates_added) if predicates_added else 'none'}",
+        f"predicates_removed={','.join(predicates_removed) if predicates_removed else 'none'}",
+        f"relation_evidence={diff.get('base_relation_evidence_level')}->{diff.get('target_relation_evidence_level')}",
+    ]
+    return "; ".join(parts)
 
 
 def _build_summary(
@@ -320,6 +496,20 @@ def _build_summary(
         for setting in sorted({row.get("setting") for row in scene_setting_rows})
     }
     required_coverage = {setting: setting_export_counts.get(setting, {}).get("num_success", 0) for setting in CORE_SETTINGS}
+    num_reconstructed_examples = sum(
+        1
+        for row in scene_setting_rows
+        if bool(
+            isinstance(row.get("metadata"), dict)
+            and row["metadata"].get("reconstructed_from_prediction_summary", False)
+        )
+    )
+    num_hinted_relation_only_examples = sum(
+        1 for row in scene_setting_rows if row.get("relation_evidence_level") == "hinted"
+    )
+    num_explicit_relation_examples = sum(
+        1 for row in scene_setting_rows if row.get("relation_evidence_level") == "explicit"
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -337,6 +527,9 @@ def _build_summary(
         "num_scene_mock_external_aligned": sum(
             1 for row in alignment_rows if bool(row.get("has_mock_external_alignment"))
         ),
+        "num_reconstructed_scene_setting_examples": num_reconstructed_examples,
+        "num_hinted_relation_only_examples": num_hinted_relation_only_examples,
+        "num_explicit_relation_examples": num_explicit_relation_examples,
         "setting_counts": setting_counts,
         "setting_export_counts": setting_export_counts,
         "required_setting_coverage": required_coverage,
@@ -355,6 +548,9 @@ def _render_summary_markdown(summary: dict[str, Any]) -> str:
         f"- num_qa_examples: `{summary.get('num_qa_examples')}`",
         f"- num_grounding_examples: `{summary.get('num_grounding_examples')}`",
         f"- num_alignment_examples: `{summary.get('num_alignment_examples')}`",
+        f"- num_reconstructed_scene_setting_examples: `{summary.get('num_reconstructed_scene_setting_examples')}`",
+        f"- num_hinted_relation_only_examples: `{summary.get('num_hinted_relation_only_examples')}`",
+        f"- num_explicit_relation_examples: `{summary.get('num_explicit_relation_examples')}`",
         "",
         "## Alignment Coverage",
         f"- num_scene_v0_v1_aligned: `{summary.get('num_scene_v0_v1_aligned')}`",
@@ -389,6 +585,19 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
             handle.write("\n")
 
 
+def _to_str_set(value: Any) -> set[str]:
+    if not isinstance(value, list):
+        return set()
+    return {str(item).strip() for item in value if str(item).strip()}
+
+
+def _safe_int(value: Any, default: int | None = None) -> int | None:
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
 def _none_if_empty(value: Any) -> str | None:
     if value is None:
         return None
@@ -398,4 +607,3 @@ def _none_if_empty(value: Any) -> str | None:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

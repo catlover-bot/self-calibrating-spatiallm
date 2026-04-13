@@ -680,12 +680,16 @@ def _serialize_scene_prediction(prediction: Any) -> dict[str, Any]:
             }
         )
 
+    prediction_metadata = getattr(prediction, "metadata", {})
+    if not isinstance(prediction_metadata, dict):
+        prediction_metadata = {}
+
     return {
         "sample_id": str(getattr(prediction, "sample_id", "unknown_scene")),
         "generator_name": str(getattr(prediction, "generator_name", "unknown_generator")),
         "objects": object_rows,
         "relations": relation_rows,
-        "metadata": {},
+        "metadata": dict(prediction_metadata),
     }
 
 

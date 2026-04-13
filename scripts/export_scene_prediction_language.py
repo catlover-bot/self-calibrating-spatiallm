@@ -53,11 +53,18 @@ def main() -> int:
         "relation_text": language_export.get("relation_text"),
         "scene_paragraph_text": language_export.get("scene_paragraph_text"),
         "relation_statements": language_export.get("relation_statements"),
+        "relation_evidence_level": language_export.get("relation_evidence_level"),
+        "relation_hint_count": language_export.get("relation_hint_count"),
+        "relation_hint_predicates": language_export.get("relation_hint_predicates"),
         "qa_examples": qa_examples,
         "grounding_examples": grounding_examples,
         "metadata": {
             "source_artifact": str(scene_prediction_path),
             "export_mode": "deterministic_template",
+            "object_geometry_mode": language_export.get("object_geometry_mode"),
+            "reconstructed_from_prediction_summary": language_export.get(
+                "reconstructed_from_prediction_summary"
+            ),
         },
     }
 
@@ -96,6 +103,8 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         "",
         f"- scene_id: `{payload.get('scene_id')}`",
         f"- generator_name: `{payload.get('generator_name')}`",
+        f"- relation_evidence_level: `{payload.get('relation_evidence_level')}`",
+        f"- relation_hint_count: `{payload.get('relation_hint_count')}`",
         f"- num_qa_examples: `{len(payload.get('qa_examples', []))}`",
         f"- num_grounding_examples: `{len(payload.get('grounding_examples', []))}`",
         "",
@@ -123,4 +132,3 @@ def _render_markdown(payload: dict[str, Any]) -> str:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

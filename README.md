@@ -372,9 +372,11 @@ It supports:
 - scene summary text
 - object list text
 - relation statements text
+- hinted relation evidence text when explicit relation tuples are unavailable
 - simple scene-grounded QA examples
-- simple grounding/instruction text pairs
+- weak/strong grounding text pairs (avoids fake geometric precision for summary-only exports)
 - JSONL dataset export aligned by `scene_id` and setting (`v0`, `v1`, `v1_plus_repair`, `mock`, `external`)
+- alignment export includes deterministic pairwise setting deltas (labels/relations/evidence level)
 
 Build language artifacts from an existing evaluation report:
 

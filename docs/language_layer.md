@@ -7,6 +7,7 @@ This layer makes that contribution NLP-usable without changing the calibration e
 - deterministic scene-to-text exports from structured scene predictions
 - deterministic scene-grounded QA and grounding examples
 - JSONL dataset artifacts aligned by scene and setting
+- explicit weak/strong evidence markers when only summary-level structure is available
 
 The goal is not to claim language-model performance directly.
 The goal is to expose calibration effects in language-usable representations.
@@ -30,15 +31,20 @@ With this layer, that question can be analyzed through language-facing outputs:
   - object list text
   - relation statements text
   - paragraph-style deterministic text
+  - hinted-relation preservation when explicit relation tuples are missing
+  - reconstruction transparency for summary-derived objects
 
 - `src/self_calibrating_spatiallm/language/tasks.py`
   - deterministic QA examples
   - deterministic grounding/instruction examples
   - scene-setting language record builder
+  - weak grounding statements for non-geometric reconstructed objects
+  - relation-evidence QA and relation-evidence grounding statements
 
 - `scripts/build_language_dataset.py`
   - builds language JSONL files from `evaluation_report.json`
   - supports aligned per-scene comparison across settings
+  - exports pairwise setting-difference summaries and deterministic comparison QA
 
 - `scripts/export_scene_prediction_language.py`
   - exports one `ScenePrediction` artifact into language-facing forms
@@ -75,14 +81,18 @@ Inspect first:
 1. `language_export_summary.md`
 2. `language_alignment_examples.jsonl`
 3. `language_scene_examples.jsonl`
+4. `language_qa_examples.jsonl` (check relation-evidence and setting-delta style questions)
+5. `language_grounding_examples.jsonl` (check weak vs strong grounding separation)
 
 ## Notes
 
 - Exports are deterministic and template-based.
 - No black-box language generation is used.
 - Existing calibration metrics/evaluation schema are unchanged.
+- When only summary-level prediction information is available:
+  - relation evidence is preserved as hinted evidence (not silently dropped)
+  - grounding is marked weak/approximate rather than pretending geometric precision
 - This layer is additive and compatible with:
   - calibration comparisons (`no_calibration`, `v0`, `v1`, `v1_plus_repair`)
   - generator comparisons (`mock`, `external`)
   - small and public dataset packs.
-
