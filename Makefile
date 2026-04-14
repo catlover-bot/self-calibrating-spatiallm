@@ -10,8 +10,12 @@ PUBLIC_BUILD_ARGS ?=
 LANG_EVAL_REPORT ?= outputs/eval_pack/latest/evaluation_report.json
 LANG_OUTPUT_DIR ?= outputs/eval_pack/latest/language
 SCENE_PREDICTION ?= outputs/runs/single_scene_real/04_scene_prediction.json
+DEMO_HOST ?= 127.0.0.1
+DEMO_PORT ?= 8765
+DEMO_PRESET ?= small_best_demo
+DEMO_STEP_SECONDS ?= 9
 
-.PHONY: setup setup-true-v1 install-true-v1 lint format typecheck test check pipeline pipeline-multi eval-pack failure-analysis check-env eval-v1 failure-v1 debug-v1 v1-workflow post-true-v1-analysis build-arkitscenes-manifest validate-public-manifest public-workflow build-language-dataset export-scene-language
+.PHONY: setup setup-true-v1 install-true-v1 lint format typecheck test check pipeline pipeline-multi eval-pack failure-analysis check-env eval-v1 failure-v1 debug-v1 v1-workflow post-true-v1-analysis build-arkitscenes-manifest validate-public-manifest public-workflow build-language-dataset export-scene-language demo demo-autoplay
 
 setup:
 	$(PYTHON) -m venv .venv
@@ -82,3 +86,9 @@ build-language-dataset:
 
 export-scene-language:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/export_scene_prediction_language.py --scene-prediction $(SCENE_PREDICTION)
+
+demo:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/serve_demo.py --host $(DEMO_HOST) --port $(DEMO_PORT) --open-browser
+
+demo-autoplay:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/serve_demo.py --host $(DEMO_HOST) --port $(DEMO_PORT) --open-browser --autoplay --preset $(DEMO_PRESET) --step-seconds $(DEMO_STEP_SECONDS) --loop

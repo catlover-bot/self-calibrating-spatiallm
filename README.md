@@ -405,6 +405,53 @@ See:
 
 - `docs/language_layer.md`
 
+## Recording Demo UI
+
+The repository includes a local artifact-driven demo page for screen recording:
+
+- `demo/index.html`
+
+It visualizes existing outputs (no inference run), including:
+
+- scene/setting comparison (`v0`, `v1`, `v1_plus_repair`, `mock`, `external`, `no_calibration`)
+- object and relation overlays
+- scene summary / relation text / QA / grounding panels
+- provenance and evidence/source class chips
+- autoplay presets for presentation-style transitions
+
+Serve and open demo:
+
+```bash
+make demo
+```
+
+Start directly in autoplay mode:
+
+```bash
+make demo-autoplay DEMO_PRESET=small_best_demo DEMO_STEP_SECONDS=9
+```
+
+Equivalent direct command:
+
+```bash
+PYTHONPATH=src python scripts/serve_demo.py \
+  --open-browser \
+  --autoplay \
+  --preset small_best_demo \
+  --step-seconds 9 \
+  --loop
+```
+
+Available presets:
+
+- `small_best_demo`
+- `public_relation_demo`
+- `mock_vs_external_demo`
+
+Details:
+
+- `docs/demo_recording.md`
+
 ## Failure Taxonomy
 
 Failure categories include:
@@ -465,6 +512,7 @@ Fallback-heavy interpretation:
 │   ├── run_pipeline.py
 │   ├── run_multi_scene.py
 │   ├── check_environment.py
+│   ├── serve_demo.py
 │   ├── setup_true_v1_env.sh
 │   ├── run_true_v1_workflow.sh
 │   ├── run_eval_pack.py
@@ -473,6 +521,7 @@ Fallback-heavy interpretation:
 │   ├── build_arkitscenes_manifest.py
 │   ├── validate_public_dataset_manifest.py
 │   └── run_public_dataset_workflow.sh
+├── demo/                            # Local comparison UI + autoplay presets
 ├── schemas/                         # JSON schemas for configs/artifacts
 ├── src/self_calibrating_spatiallm/
 │   ├── io/

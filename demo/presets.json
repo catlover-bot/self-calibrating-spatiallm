@@ -1,0 +1,89 @@
+[
+  {
+    "id": "small_best_demo",
+    "title": "Small Benchmark Story",
+    "description": "Show v0->v1 relation gain, repair effect, and mock/external contrast on core indoor scenes.",
+    "split": "small",
+    "default_step_seconds": 9,
+    "steps": [
+      {
+        "scene_id": "indoor_room_real_001",
+        "left_setting": "calibration_v0",
+        "right_setting": "calibration_v1",
+        "focus": "Calibration improves relation structure with minimal visual disruption.",
+        "talking_points": [
+          "Start with v0 vs v1 to show direct calibration effect before repair.",
+          "Highlight relation and label changes first, then object counts."
+        ]
+      },
+      {
+        "scene_id": "indoor_room_real_001",
+        "left_setting": "calibration_v1",
+        "right_setting": "calibration_v1_plus_repair",
+        "focus": "Repair stage resolves residual structural violations.",
+        "talking_points": [
+          "Use this step to explain calibration-only vs calibration+repair roles.",
+          "Emphasize that repair is explicit, inspectable post-processing."
+        ]
+      },
+      {
+        "scene_id": "indoor_room_real_002",
+        "left_setting": "mock_generator",
+        "right_setting": "external_generator",
+        "focus": "Compare controlled internal generator against external backend behavior.",
+        "talking_points": [
+          "Mention that both settings share the same calibration path.",
+          "Point out semantic drift or relation sparsity on external outputs if present."
+        ]
+      },
+      {
+        "scene_id": "indoor_room_real_003",
+        "left_setting": "no_calibration",
+        "right_setting": "calibration_v1",
+        "focus": "Demonstrate effect of skipping calibration entirely.",
+        "talking_points": [
+          "Frame this as an uncertainty-decision baseline.",
+          "Use relation and label evidence to discuss actionability impact."
+        ]
+      },
+      {
+        "scene_id": "indoor_room_real_005",
+        "left_setting": "calibration_v0",
+        "right_setting": "calibration_v1",
+        "focus": "Close with another v0->v1 scene to reinforce consistency.",
+        "talking_points": [
+          "Summarize what improved and what still needs external-path refinement."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "public_relation_demo",
+    "title": "Public Subset Relation Walkthrough",
+    "description": "Auto-build steps from first public scenes for v0->v1 and mock->external relation comparison.",
+    "split": "public",
+    "default_step_seconds": 10,
+    "strategy": {
+      "type": "first_n_scenes",
+      "count": 5,
+      "comparisons": [
+        ["calibration_v0", "calibration_v1"],
+        ["mock_generator", "external_generator"]
+      ],
+      "focus": "Public-scene robustness and relation propagation under ambiguity."
+    }
+  },
+  {
+    "id": "mock_vs_external_demo",
+    "title": "Mock vs External Focus",
+    "description": "Cycle through scenes comparing mock generator and external SpatialLM outputs.",
+    "split": "small",
+    "default_step_seconds": 8,
+    "strategy": {
+      "type": "first_n_scenes",
+      "count": 5,
+      "comparisons": [["mock_generator", "external_generator"]],
+      "focus": "Controlled-vs-real backend differences in objects, relations, and language artifacts."
+    }
+  }
+]

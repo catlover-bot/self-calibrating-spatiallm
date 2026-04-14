@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Self-Calibrating SpatialLM Demo</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>Self-Calibrating Spatial World Modeling Demo</h1>
+        <p>
+          Compare calibration settings and generator modes through structured predictions and
+          language-facing outputs.
+        </p>
+      </div>
+      <div class="topbar-controls">
+        <label>
+          Split
+          <select id="splitSelect"></select>
+        </label>
+        <label>
+          Scene
+          <select id="sceneSelect"></select>
+        </label>
+        <label>
+          Left Setting
+          <select id="leftSettingSelect"></select>
+        </label>
+        <label>
+          Right Setting
+          <select id="rightSettingSelect"></select>
+        </label>
+      </div>
+    </header>
+
+    <section class="autoplay-bar">
+      <div class="autoplay-controls">
+        <label>
+          Preset
+          <select id="presetSelect"></select>
+        </label>
+        <label>
+          Step Duration (sec)
+          <input id="stepDurationInput" type="number" min="2" max="60" step="1" value="8" />
+        </label>
+        <label class="checkbox-inline">
+          <input id="loopCheckbox" type="checkbox" checked />
+          Loop
+        </label>
+        <button id="autoplayToggleBtn" class="primary">Start Autoplay</button>
+        <button id="nextStepBtn">Next Step</button>
+      </div>
+      <div class="autoplay-status">
+        <div id="stepCounter">Step 0 / 0</div>
+        <div id="stepDescription">Manual mode</div>
+      </div>
+    </section>
+
+    <section id="statusBanner" class="status-banner hidden"></section>
+
+    <main class="content-grid">
+      <section class="comparison-column">
+        <h2 id="leftTitle">Left</h2>
+        <canvas id="leftCanvas" width="640" height="360"></canvas>
+        <div class="evidence-row">
+          <span id="leftEvidenceChip" class="chip">evidence: unknown</span>
+          <span id="leftSourceChip" class="chip">source: unknown</span>
+          <span id="leftStatusChip" class="chip">status: unknown</span>
+        </div>
+        <details open>
+          <summary>Scene Summary</summary>
+          <p id="leftSceneSummary" class="mono-block"></p>
+          <p id="leftRelationText" class="mono-block"></p>
+        </details>
+        <details open>
+          <summary>Objects</summary>
+          <ul id="leftObjectsList" class="compact-list"></ul>
+        </details>
+        <details open>
+          <summary>Relations</summary>
+          <ul id="leftRelationsList" class="compact-list"></ul>
+        </details>
+        <details>
+          <summary>QA Examples</summary>
+          <ul id="leftQaList" class="compact-list"></ul>
+        </details>
+        <details>
+          <summary>Grounding Examples</summary>
+          <ul id="leftGroundingList" class="compact-list"></ul>
+        </details>
+        <details>
+          <summary>Provenance</summary>
+          <pre id="leftProvenance" class="mono-block"></pre>
+        </details>
+      </section>
+
+      <section class="comparison-column">
+        <h2 id="rightTitle">Right</h2>
+        <canvas id="rightCanvas" width="640" height="360"></canvas>
+        <div class="evidence-row">
+          <span id="rightEvidenceChip" class="chip">evidence: unknown</span>
+          <span id="rightSourceChip" class="chip">source: unknown</span>
+          <span id="rightStatusChip" class="chip">status: unknown</span>
+        </div>
+        <details open>
+          <summary>Scene Summary</summary>
+          <p id="rightSceneSummary" class="mono-block"></p>
+          <p id="rightRelationText" class="mono-block"></p>
+        </details>
+        <details open>
+          <summary>Objects</summary>
+          <ul id="rightObjectsList" class="compact-list"></ul>
+        </details>
+        <details open>
+          <summary>Relations</summary>
+          <ul id="rightRelationsList" class="compact-list"></ul>
+        </details>
+        <details>
+          <summary>QA Examples</summary>
+          <ul id="rightQaList" class="compact-list"></ul>
+        </details>
+        <details>
+          <summary>Grounding Examples</summary>
+          <ul id="rightGroundingList" class="compact-list"></ul>
+        </details>
+        <details>
+          <summary>Provenance</summary>
+          <pre id="rightProvenance" class="mono-block"></pre>
+        </details>
+      </section>
+    </main>
+
+    <section class="diff-panel">
+      <h2>Comparison Highlights</h2>
+      <div class="diff-grid">
+        <div>
+          <h3>Object Labels</h3>
+          <div id="diffObjectLabels" class="chip-row"></div>
+        </div>
+        <div>
+          <h3>Relation Predicates</h3>
+          <div id="diffRelationPredicates" class="chip-row"></div>
+        </div>
+        <div>
+          <h3>Counts & Evidence</h3>
+          <div id="diffCounts" class="chip-row"></div>
+        </div>
+      </div>
+      <details open>
+        <summary>Autoplay Narration / Talking Points</summary>
+        <ul id="narrationList" class="compact-list"></ul>
+      </details>
+    </section>
+
+    <footer class="footer-note">
+      <p>
+        Keyboard: <code>Space</code> start/stop autoplay, <code>→</code> next step.
+        This demo visualizes existing artifacts and does not run model inference.
+      </p>
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
