@@ -1,0 +1,92 @@
+{
+  "name": "robustness_boundary_v1",
+  "seed": 23,
+  "output_dir": "outputs/eval_pack/robustness_boundary/latest",
+  "include_unperturbed_baseline": true,
+  "export_language_outputs": true,
+  "splits": [
+    {
+      "split_name": "small",
+      "role": "clean_validation",
+      "manifest_path": "configs/eval_pack/small_eval_pack.json",
+      "enabled": true,
+      "allow_missing_manifest": false,
+      "tags": [
+        "robustness_boundary",
+        "clean_validation"
+      ],
+      "notes": "Small split acts as cleaner boundary-validation signal."
+    },
+    {
+      "split_name": "public",
+      "role": "noisy_realism",
+      "manifest_path": "configs/public_datasets/arkitscenes/generated/arkitscenes_subset_manifest.json",
+      "enabled": true,
+      "allow_missing_manifest": true,
+      "tags": [
+        "robustness_boundary",
+        "noisy_realism",
+        "public_dataset"
+      ],
+      "notes": "Public split probes high-ambiguity real-world robustness."
+    }
+  ],
+  "perturbations": [
+    {
+      "name": "rotation_yaw",
+      "enabled": true,
+      "severities": [0.2, 0.5, 0.8],
+      "params": {
+        "max_yaw_deg": 70.0
+      }
+    },
+    {
+      "name": "tilt_up_axis",
+      "enabled": true,
+      "severities": [0.2, 0.5, 0.8],
+      "params": {
+        "max_tilt_deg": 20.0
+      }
+    },
+    {
+      "name": "manhattan_degradation",
+      "enabled": true,
+      "severities": [0.2, 0.5, 0.8],
+      "params": {
+        "max_shear": 0.32
+      }
+    },
+    {
+      "name": "structural_dropout",
+      "enabled": true,
+      "severities": [0.2, 0.5, 0.8],
+      "params": {
+        "max_dropout_ratio": 0.55,
+        "min_keep_fraction": 0.18
+      }
+    },
+    {
+      "name": "clutter_injection",
+      "enabled": true,
+      "severities": [0.2, 0.5, 0.8],
+      "params": {
+        "max_injection_ratio": 0.32,
+        "bbox_padding_ratio": 0.05
+      }
+    },
+    {
+      "name": "density_sparsity",
+      "enabled": true,
+      "severities": [0.2, 0.5, 0.8],
+      "params": {
+        "max_drop_ratio": 0.8
+      }
+    }
+  ],
+  "notes": "Boundary study: identify where calibration remains helpful vs where reliability degrades under controlled perturbations.",
+  "metadata": {
+    "focus": "calibration_decision_under_uncertainty",
+    "preserve_existing_eval_pipeline": true
+  }
+}
+

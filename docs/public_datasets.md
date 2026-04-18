@@ -121,6 +121,23 @@ Equivalent manual sequence:
 - `scripts/run_failure_analysis.py`
 - `scripts/run_post_true_v1_analysis.py`
 
+## Run Robustness-Boundary Study on Public + Small
+
+After generating the ARKitScenes subset manifest, run the perturbation-grid workflow:
+
+```bash
+make robustness-boundary \
+  ROBUSTNESS_CONFIG=configs/robustness_boundary.default.json \
+  ROBUSTNESS_OUTPUT=outputs/eval_pack/robustness_boundary/latest
+```
+
+This uses:
+- `small` as clean validation
+- `public` as noisy realism
+
+Detailed boundary-analysis outputs:
+- `docs/robustness_boundary.md`
+
 ## Artifacts To Inspect First
 
 - `outputs/eval_pack/public_medium_latest/researcher_summary.md`

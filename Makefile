@@ -14,8 +14,10 @@ DEMO_HOST ?= 127.0.0.1
 DEMO_PORT ?= 8765
 DEMO_PRESET ?= small_best_demo
 DEMO_STEP_SECONDS ?= 9
+ROBUSTNESS_CONFIG ?= configs/robustness_boundary.default.json
+ROBUSTNESS_OUTPUT ?= outputs/eval_pack/robustness_boundary/latest
 
-.PHONY: setup setup-true-v1 install-true-v1 lint format typecheck test check pipeline pipeline-multi eval-pack failure-analysis check-env eval-v1 failure-v1 debug-v1 v1-workflow post-true-v1-analysis build-arkitscenes-manifest validate-public-manifest public-workflow build-language-dataset export-scene-language demo demo-autoplay
+.PHONY: setup setup-true-v1 install-true-v1 lint format typecheck test check pipeline pipeline-multi eval-pack failure-analysis check-env eval-v1 failure-v1 debug-v1 v1-workflow post-true-v1-analysis build-arkitscenes-manifest validate-public-manifest public-workflow build-language-dataset export-scene-language demo demo-autoplay robustness-boundary
 
 setup:
 	$(PYTHON) -m venv .venv
@@ -92,3 +94,6 @@ demo:
 
 demo-autoplay:
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/serve_demo.py --host $(DEMO_HOST) --port $(DEMO_PORT) --open-browser --autoplay --preset $(DEMO_PRESET) --step-seconds $(DEMO_STEP_SECONDS) --loop
+
+robustness-boundary:
+	PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/run_robustness_boundary.py --config $(ROBUSTNESS_CONFIG) --output-dir $(ROBUSTNESS_OUTPUT)

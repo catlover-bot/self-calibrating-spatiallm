@@ -90,6 +90,15 @@ Language dataset builder writes:
 - `language_export_summary.json`
 - `language_export_summary.md`
 
+Robustness-boundary workflow additionally writes perturbation-aware language artifacts:
+
+- `robustness_language_scene_examples.jsonl`
+- `robustness_language_qa_examples.jsonl`
+- `robustness_language_grounding_examples.jsonl`
+- `robustness_language_severity_deltas.jsonl`
+- `robustness_language_summary.json`
+- `robustness_language_summary.md`
+
 Inspect first:
 
 1. `language_export_summary.md`

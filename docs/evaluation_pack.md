@@ -72,6 +72,7 @@ Public dataset subset workflow (ARKitScenes-first scaffold):
 
 - `docs/public_datasets.md`
 - `docs/language_layer.md`
+- `docs/robustness_boundary.md`
 
 ## Compared Settings
 
@@ -215,3 +216,25 @@ PYTHONPATH=src python scripts/build_language_dataset.py \
   --evaluation-report outputs/eval_pack/latest/evaluation_report.json \
   --output-dir outputs/eval_pack/latest/language
 ```
+
+## Robustness-Boundary Extension
+
+The robustness-boundary workflow keeps this eval-pack structure and runs it over deterministic
+perturbation grids.
+
+Entry points:
+
+- `configs/robustness_boundary.default.json`
+- `scripts/run_robustness_boundary.py`
+- `make robustness-boundary`
+
+Outputs land under:
+
+- `outputs/eval_pack/robustness_boundary/latest/`
+
+Inspect first:
+
+- `robustness_boundary_summary.md`
+- `robustness_boundary_rows.jsonl`
+- `perturbation_inventory.json`
+- `language/robustness_language_summary.md`

@@ -18,6 +18,7 @@ The repository now supports:
 - quantitative setting comparisons and failure taxonomy summaries
 - post-run v0-v1 analysis artifacts (true-v1 only, fallback-only, scene deltas, stratified summaries)
 - v1.5 propagation diagnostics for calibration-to-generation sensitivity checks
+- perturbation-driven robustness-boundary workflow (small clean split + public noisy split)
 
 ## Quickstart
 
@@ -362,6 +363,54 @@ Inspect first:
 Detailed guide:
 
 - `docs/public_datasets.md`
+
+## Robustness-Boundary Experiments
+
+Use controlled perturbations to study when calibration remains helpful vs when it becomes unreliable.
+
+This workflow is additive and keeps the existing eval-pack pipeline unchanged.
+It generates perturbation variants from base scenes, runs the standard settings, and aggregates boundary summaries.
+
+Default config:
+
+- `configs/robustness_boundary.default.json`
+
+Roles in the default config:
+
+- `small`: `clean_validation`
+- `public`: `noisy_realism`
+
+Run:
+
+```bash
+make robustness-boundary
+```
+
+Direct script:
+
+```bash
+PYTHONPATH=src python scripts/run_robustness_boundary.py \
+  --config configs/robustness_boundary.default.json \
+  --output-dir outputs/eval_pack/robustness_boundary/latest
+```
+
+First artifacts to inspect:
+
+- `outputs/eval_pack/robustness_boundary/latest/robustness_boundary_summary.md`
+- `outputs/eval_pack/robustness_boundary/latest/robustness_boundary_summary.json`
+- `outputs/eval_pack/robustness_boundary/latest/robustness_boundary_rows.jsonl`
+- `outputs/eval_pack/robustness_boundary/latest/perturbation_inventory.json`
+- `outputs/eval_pack/robustness_boundary/latest/language/robustness_language_summary.md`
+- `outputs/eval_pack/robustness_boundary/latest/language/robustness_language_severity_deltas.jsonl`
+
+The boundary summary includes:
+
+- perturbation family/severity aggregation
+- partial-calibration and fallback rates
+- ambiguity/confidence strata summaries
+- major failure-category summaries
+- heuristic boundary findings (for example, where reliability starts degrading)
+- external-vs-mock divergence summaries when external runs are available
 
 ## Language-Facing Exports
 
